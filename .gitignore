@@ -1,0 +1,6 @@
+.android/
+.gradle/
+node_modules/
+*.img
+*.qcow2
+*.bin
