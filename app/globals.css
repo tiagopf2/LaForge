@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 30 25% 97%;
+    --foreground: 30 10% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 30 10% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 30 10% 10%;
+    --primary: 25 95% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 15% 92%;
+    --secondary-foreground: 30 10% 25%;
+    --muted: 30 12% 94%;
+    --muted-foreground: 30 8% 46%;
+    --accent: 25 80% 48%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 30 12% 88%;
+    --input: 30 12% 88%;
+    --ring: 25 95% 53%;
+    --radius: 0.625rem;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.07);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.08);
+    --duration-fast: 150ms;
+    --duration-normal: 250ms;
+    --duration-slow: 350ms;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+[data-hydration-error] {
+  display: none !important;
+}
+
+/*
+ * iPad-first touch ergonomics.
+ *
+ * `:where()` keeps specificity at 0 so any component class (h-12, py-2, an
+ * inline "remove" chip button) still wins. Elements opting out carry
+ * `data-compact`, which is what small inline controls inside badges use.
+ */
+@media (pointer: coarse) {
+  :where(button, [role='button'], input, select, textarea):not([data-compact]) {
+    min-height: 56px;
+  }
+
+  /* iOS zooms the page when a focused field is under 16px. */
+  :where(input, select, textarea) {
+    font-size: 16px;
+  }
+}
+
+@media (pointer: fine) {
+  :where(button, [role='button']):not([data-compact]) {
+    min-height: 44px;
+  }
+}
+
+/* Sweaty hands: no accidental text selection while tapping through a session. */
+:where(button, [role='button'], [role='tab']) {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Printed warm-up / session sheets handed to the member. */
+@media print {
+  .print-hidden,
+  aside,
+  header {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+  main {
+    margin: 0 !important;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 4px;
+}
