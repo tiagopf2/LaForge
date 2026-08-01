@@ -1,0 +1,71 @@
+﻿name,category,primary_muscles,secondary_muscles,movement_pattern,difficulty,equipment,contraindication_tags,loading_scheme,coach_notes,is_tracked,tier,active
+Rowing (Erg),cardio,back;full_body,shoulders;core;legs,cardio,all,rowing_machine,lower_back,500m benchmark. Beginner >2:10 / Open 1:55-2:05 / Pro <1:50,"Stable cadence, steady power. Tracked 500m benchmark.",yes,studio,yes
+Bike Erg,cardio,quadriceps;full_body,hamstrings;glutes,cardio,all,bike_erg,knee,1km benchmark; adapt by level,Sustained pace. Tracked 1km benchmark.,yes,studio,yes
+Run,cardio,full_body,calves;quadriceps;core,cardio,all,treadmill;outdoor,knee;ankle,400m benchmark. Beginner >6min/km / Open 4:30-5:30 / Pro <4:30,"Relaxed posture, steady cadence. Tracked 400m benchmark.",yes,studio,yes
+Ski Erg,cardio,shoulders;back,core;triceps,cardio,all,ski_erg,shoulder,500m: Beginner >2:10 / Open 1:55-2:05 / Pro <1:50,"Stable cadence, core engaged.",no,studio,yes
+Echo Bike,cardio,full_body,arms;legs;core,cardio,all,echo_bike,shoulder,Max cals/40s: Beginner 8-9 / Open 11-12 / Pro 14-15,Max effort intervals 40/20 or 30/15.,no,studio,yes
+Barbell Back Squat,compound,quadriceps,glutes;hamstrings;core,squat,intermediate,barbell;plates,knee;lower_back,Beginner: goblet squat. Open: 60-80% 1RM. Pro: 80-90% 1RM,"Brace, knees out, 2-3s descent, active drive up. Tracked.",yes,studio,yes
+Deadlift,compound,hamstrings;glutes,back;core;quadriceps,hinge,intermediate,barbell;plates,lower_back,Linear progression 3x3 to 3x5,"Control priority, speed on the way up. Tracked.",yes,studio,yes
+Barbell Bench Press,compound,chest;triceps,shoulders;core,push,intermediate,barbell;plates;bench,shoulder,3 sets x 6-8 reps + 1 max-rep speed set,"Controlled descent, explosive press. Spotter for max sets. Tracked.",yes,studio,yes
+Barbell Overhead Press,compound,shoulders;triceps,core;traps,push,intermediate,barbell;plates;rack,shoulder;lower_back,3 sets x 5-6 reps. Rest 2min,"Glutes/abs braced, vertical press, don't arch. Tracked.",yes,studio,yes
+Barbell Row,compound,back;biceps,rear_shoulders;core,pull,intermediate,barbell;plates,lower_back,3 sets x 6-8 reps. Torso ~horizontal,"Standard bent-over row. Strict torso, no swing. Tracked.",yes,studio,yes
+Trap Bar Deadlift,compound,hamstrings;glutes,quadriceps;back;core,hinge,intermediate,trap_bar;plates,lower_back,Based on 1RM deadlift. Drop & Go,Max speed on the way up. Alt to conventional deadlift.,no,advanced,yes
+Box Squat,compound,quadriceps;glutes,core;hamstrings,squat,advanced,barbell;plates;box,knee;lower_back,"Build a 5RM @ RPE 7, then drop sets 2x7 @80%","Find working load of the day, brief sit on box, controlled rebound.",no,advanced,yes
+Deficit Deadlift,compound,hamstrings;glutes,back;core;quadriceps,hinge,advanced,barbell;plates;deficit,lower_back,3x5. Max deficit 10cm,"Brace before pulling, neutral back, straps allowed.",no,advanced,yes
+Barbell Paused Deadlift,compound,hamstrings;glutes,back;core;quadriceps,hinge,intermediate,barbell;plates,lower_back,4x5. 2s pause at knee,"Maintain tension during pause, explosive after. Position strength.",no,advanced,yes
+Back Squat Tempo (6-0-X-1),compound,quadriceps;glutes,core;hamstrings,squat,intermediate,barbell;plates,knee;lower_back,4x7. Tempo 6s down / explosive up / 1s top,Builds eccentric strength + concentric power.,no,advanced,yes
+Bench Press Clusters,compound,chest;triceps,shoulders;core,push,advanced,barbell;plates;bench,shoulder,"4 sets of 3.3.3 / 2.2.2 / 1.1.1, 3-5s rack rest between clusters",Heavier than continuous sets. Speed + control each rep.,no,advanced,yes
+Bench Press Wave Loading,compound,chest;triceps,shoulders;core,push,advanced,barbell;plates;bench,shoulder,Waves 5/10 + 4/8 + 3/6 (heavy/light speed),"Light sets done at max speed, not recovery.",no,advanced,yes
+Back Squat / Deadlift Contrast (heavy/light),compound,quadriceps;glutes;hamstrings,core,squat,advanced,barbell;plates,knee;lower_back,3 sets: 5 heavy 80-90% then 10 light 50-60% at speed,Heavy potentiates light. Stop if speed drops.,no,advanced,yes
+Weighted Strict Pull-Up,compound,back;biceps,shoulders;core,pull,advanced,pull_up_bar;weight_belt,shoulder;elbow,4-5 sets x 5 reps RPE 7-8,Same load all sets. Bodyweight/band if <5 reps available.,no,advanced,yes
+Barbell Pendlay Row,compound,back;biceps,rear_shoulders;core,pull,intermediate,barbell;plates,lower_back,3 sets x 12 reps RPE 7,"Bar resets on floor each rep, explosive pull. Stricter than Barbell Row.",no,advanced,yes
+Strict Pull-Up,compound,back;biceps,shoulders;core,pull,intermediate,pull_up_bar,shoulder;elbow,Max reps or RIR-based sets,"Chin clearly over bar, no kipping.",no,studio,yes
+Incline Dumbbell Press,accessory,chest;shoulders,triceps,push,all,dumbbells;incline_bench,shoulder,3-4 sets RPE 7-9,"Control down, explode up, elbows ~45deg.",no,studio,yes
+Strict Bar Dips,accessory,triceps;shoulders,chest;core,push,intermediate,dip_bar,shoulder;elbow,Max reps 40s. Beginner: band assist,"Max effort/speed, irreproachable quality.",no,studio,yes
+Dumbbell Push Ups,accessory,chest;triceps,shoulders;core,push,all,dumbbells,wrist,Max reps 40s. Beginner: standard push ups,"Full ROM on dumbbells, max speed with quality.",no,studio,yes
+Bench Dips,accessory,triceps;shoulders,chest,push,all,bench,shoulder;wrist,Max reps 15s,"Max speed, full ROM.",no,studio,yes
+Narrow Grip Dumbbell Incline Press,accessory,chest;triceps,shoulders,push,intermediate,dumbbells;incline_bench,shoulder;elbow,3 sets RPE 7,"Close grip, triceps + upper chest focus.",no,studio,yes
+Single Arm Dumbbell Z Press,accessory,shoulders;triceps,core;traps,push,intermediate,dumbbell,shoulder;hip,3-4 x 8/8 RPE 7,"Seated legs extended, strict brace, builds shoulder stability.",no,studio,yes
+Dual Seated Dumbbell Arnold Press,accessory,shoulders,triceps;traps,push,beginner,dumbbells;bench,shoulder;wrist,3 sets x 12 RPE 7,"Rotate wrists through press, all 3 delt heads.",no,studio,yes
+Flat Bench Dumbbell Fly,accessory,chest,front_shoulders,push,beginner,dumbbells;bench,shoulder,2-3 sets x 10,"Slight elbow bend held, full controlled ROM. Optional.",no,studio,yes
+Single Arm Landmine Row,accessory,back;biceps,core;rear_shoulders,pull,intermediate,barbell;landmine,lower_back,3 sets x 10/10 RPE 7-8,"Strict brace, no rotation. Same load all sets.",no,studio,yes
+Incline Chest Supported DB Row,accessory,back;biceps,rear_shoulders;core,pull,all,dumbbells;incline_bench,shoulder,3 sets x 10/10 RPE 7-8,Chest on bench = no lumbar compensation. Alternate L/R.,no,studio,yes
+Dual Dumbbell Prone Row,accessory,back;biceps,rear_shoulders;core,pull,all,dumbbells;bench,shoulder;lower_back,3 sets x 12 RPE 8-9,"Prone on bench, bilateral pull, no lumbar compensation.",no,studio,yes
+KB Split Stance Single Arm Row,accessory,back;biceps,core;glutes,pull,intermediate,kettlebell,lower_back,3-4 x 8/8 RPE 7,"Stable split stance, strict pull no rotation.",no,studio,yes
+Feet Elevated Ring Row,accessory,back;biceps,core;rear_shoulders,pull,intermediate,gym_rings,shoulder,Max reps RPE 9. Regression: feet on floor,Min 10 reps/set or regress. Constant tension.,no,studio,yes
+Single Arm Landmine Meadows Row,accessory,back;biceps,core;rear_shoulders,pull,intermediate,barbell;landmine,lower_back,3x10/10 RPE 9,"Constant tension, no compensation.",no,advanced,yes
+Seated Dumbbell Rear Delt Fly,accessory,rear_shoulders,traps;rhomboids,pull,beginner,dumbbells;bench,shoulder,2-3 sets x 12,"Hinge forward, controlled lateral raise. Optional.",no,studio,yes
+Banded Face Pulls,accessory,rear_shoulders;traps,rhomboids;rotators,pull,all,band;anchor,shoulder,2-3 sets x 20s max reps,"Pull to face, external rotators. Great for shoulder health.",no,studio,yes
+Incline Bench Dumbbell Y Raise,accessory,rear_shoulders;traps,rhomboids;rotators,pull,all,dumbbells;incline_bench,shoulder,2-3 sets x 10 (light),"Y-raise on incline, mid/lower traps. Optional.",no,studio,yes
+Bent Over Dumbbell Reverse Fly,accessory,rear_shoulders;traps,rhomboids;rotators,pull,all,dumbbells,shoulder,2-3 sets x 10 (light),"Torso ~horizontal, controlled raise to shoulder height.",no,studio,yes
+KB Front Rack Front Foot Elevated Split Squat,accessory,quadriceps;glutes,core;hamstrings,lunge,intermediate,kettlebells,knee;hip,3 sets x 10/10 RPE 7,"Front foot elevated, KBs front rack, strict brace.",no,studio,yes
+KB Front Rack Wall Sit,accessory,quadriceps;glutes,core,squat,all,kettlebells,knee,3-4 sets x 20s isometric,"Back on wall, 90/90, KBs front rack, max iso tension.",no,studio,yes
+KB Front Rack Box Step Up,accessory,quadriceps;glutes,core;stabilizers,lunge,intermediate,kettlebells;box,knee;ankle,3-4 sets x 20s max reps,"Alternating step up, KBs front rack, quality over speed.",no,studio,yes
+Mixed KB Rack/Suitcase Lateral Box Step Up,accessory,quadriceps;glutes,core;adductors;stabilizers,lunge,intermediate,kettlebells;box,knee;ankle,3 sets x 12/12 RPE 7,"One KB rack, one suitcase. Unilateral balance + adductors.",no,advanced,yes
+Glute Ham Raise Negative,accessory,hamstrings;glutes,core,hinge,intermediate,ghd,knee,2-3 sets x 5-10. 5-6s descent,Eccentric only. Optional.,no,studio,yes
+Sandbag Front Rack Lunges,accessory,quadriceps;glutes,core;hamstrings,lunge,all,sandbag,knee,"EMOM 20s max reps. Pro 30/20kg, Open 20kg, Beginner 15/5kg","Sandbag front rack, fluid forward lunge. HYROX-specific.",no,advanced,yes
+Copenhagen Plank,accessory,core;adductors,glutes;hip_stabilizers,core,intermediate,bench,hip;adductor,30-60s hold. Beginner: knees down,"Strict side plank, high hip, no pelvic rotation.",no,studio,yes
+Landmine Oblique Twist,accessory,core;obliques,shoulders;hip,rotation,intermediate,barbell;landmine,lower_back,8/8 RPE 7,"Rotate from hips, semi-extended arms, full ROM.",no,studio,yes
+Half Kneeling Landmine Twist,accessory,core;obliques,shoulders;hip,rotation,all,barbell;landmine,lower_back;knee,2-3 sets x 10/10,"One knee down, strict brace, stable hips. Optional.",no,studio,yes
+Band Pallof Press to Rotation,accessory,core,obliques;stabilizers,rotation,all,band;anchor,shoulder,2-3 sets x 12/12,Anti-rotation press then rotate. Resist band pull.,no,studio,yes
+Tall Kneeling DB Low to High Chop,accessory,core;obliques,shoulders;hip,rotation,all,dumbbell,lower_back;knee,2-3 sets x 10/10,"Diagonal chop, strict brace, stable hips. Optional.",no,studio,yes
+Star Plank Dumbbell Rotation,accessory,core;shoulders,stabilizers;obliques,core,intermediate,dumbbell,wrist;shoulder,2-3 sets x 10/10,Single-arm plank with DB rotation. Optional.,no,studio,yes
+Hollow Body Flutter Kicks,accessory,core;abs,hip_flexors,core,all,bodyweight,lower_back,2-3 sets x 20-30s,"Hollow position, low back glued to floor. Optional.",no,studio,yes
+Banded Reverse Crunch,accessory,core;abs,hip_flexors,core,all,band;low_anchor,lower_back,2-3 sets x 10-20,"Knees to chest vs resistance, low back flat. Optional.",no,studio,yes
+Mountain Climbers,accessory,core;shoulders,quadriceps;cardio,core,all,bodyweight,wrist,"Circuit/bonus, volume per session","High plank, fast alternating knees, stable hips.",no,studio,yes
+Banded Lateral Walk,mobility,glute_medius,abductors;hip_stabilizers,core,all,band,,2-3 sets x 10/10,"Band at ankles/knees, constant tension. Glute med activation.",no,studio,yes
+Bridge Psoas March,mobility,psoas;core,glutes;lower_back,core,all,bodyweight,lower_back,2-3 sets x 10/10,"Bridge position, alternate knee march, hold brace.",no,studio,yes
+Banded Hamstring Kicks,mobility,hamstrings,glutes;core,core,all,band,,2-3 sets x 20s dynamic,"Band at ankle, dynamic leg extension back.",no,studio,yes
+Cobra Walking Lunges,mobility,quadriceps;glutes,hips;core,lunge,all,bodyweight,knee,2 x 10-20m,Forward lunge with torso rotation. Hip + T-spine mobility.,no,studio,yes
+Rower Hamstring Curls,mobility,hamstrings,glutes;core,core,all,rowing_machine,knee,2-3 sets x 10-20,"Heels on rower seat, curl seat in, glutes up.",no,studio,yes
+Wall Ball,conditioning,quadriceps;full_body,shoulders;core;glutes,squat,all,medicine_ball;wall,shoulder,Beginner 4-6kg / Open 6-9kg / Pro 9-12kg,"Full squat then push, steady cadence.",no,studio,yes
+Burpee,conditioning,full_body,shoulders;core;legs,cardio,all,bodyweight,wrist,Beginner: step burpee. Open/Pro: standard,Fluid continuous cadence. No jump required for beginners.,no,studio,yes
+Box Jump,conditioning,quadriceps;glutes,calves;core,squat,all,box,knee;ankle,Beginner: step up. Advanced: 24in/20in,"Soft landing, step down under fatigue.",no,studio,yes
+Box Jump Over,conditioning,quadriceps;glutes,calves;core,squat,intermediate,box,knee;ankle,24in/20in. Beginner: step over,"Soft landing, fluid sequencing.",no,studio,yes
+Sandbag Walking Lunge,conditioning,quadriceps;glutes,core;hamstrings,lunge,all,sandbag,knee,Beginner 10kg / Open 20kg / Pro 30kg,"Stable posture, front knee tracks foot.",no,studio,yes
+Sled Push,conditioning,quadriceps;glutes,core;shoulders;calves,carry,all,sled,lower_back,Beginner 80/60kg / Open 152/102kg / Pro 202/152kg,"Low posture, continuous drive through legs/hips.",no,studio,yes
+Sled Pull,conditioning,back;full_body,arms;core;legs,pull,all,sled;rope,shoulder,Beginner 80/60kg / Open 103/78kg / Pro 153/103kg,"Constant rope tension, drive through legs/hips.",no,studio,yes
+Farmer Carry (Dumbbells),conditioning,full_body;grip,core;traps;legs,carry,all,dumbbells,lower_back,Beginner 2x15kg / Open 2x20-30kg / Pro 2x30-40kg,"Fast stable walk, controlled grip. Score = distance.",no,studio,yes
+Dumbbell Thrusters,conditioning,quadriceps;shoulders,glutes;core;triceps,push,all,dumbbells,shoulder;knee,30s ON/30s OFF. @2x15/10kg,"Full squat then simultaneous press, steady rhythm.",no,studio,yes
+Burpee Broad Jump,conditioning,full_body,shoulders;core;legs;glutes,cardio,intermediate,bodyweight,knee;ankle,Max distance/set,Explosive horizontal jump after each burpee.,no,advanced,yes
+Burpee to Plate,conditioning,full_body,shoulders;core;legs,cardio,all,bodyweight;plate,wrist;knee,Max reps on interval. Beginner: step over,"Controlled cadence, finish both feet on plate.",no,studio,yes

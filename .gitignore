@@ -1,6 +1,37 @@
-.android/
-.gradle/
+# dependencies
 node_modules/
-*.img
-*.qcow2
-*.bin
+.pnp
+.pnp.js
+.yarn/
+
+# next.js
+.next/
+out/
+build/
+next-env.d.ts
+
+# environment & secrets
+.env
+.env.*
+!.env.example
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# os / editor
+.DS_Store
+Thumbs.db
+*.swp
+
+# misc
+*.pem
+coverage/
+.vercel
+*.tsbuildinfo
+
+# Leftover clone of this very repository, made before the project itself was
+# put under version control. Safe to delete from disk.
+LaForge/

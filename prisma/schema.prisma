@@ -1,0 +1,256 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MovementType {
+  strength
+  cardio
+}
+
+enum PerformancePhase {
+  calibration
+  progression
+}
+
+enum SessionType {
+  upper
+  lower
+  full
+  conditioning
+}
+
+enum MemberLevel {
+  beginner
+  intermediate
+  advanced
+}
+
+enum ExerciseCategory {
+  compound
+  accessory
+  cardio
+  mobility
+  conditioning
+}
+
+enum MovementPattern {
+  push
+  pull
+  hinge
+  squat
+  lunge
+  carry
+  core
+  rotation
+  cardio
+}
+
+enum Difficulty {
+  all
+  beginner
+  intermediate
+  advanced
+}
+
+enum CycleStatus {
+  draft
+  validated
+  archived
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String?
+  hashedPassword String
+  role           String   @default("coach")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Member {
+  id                 String              @id @default(cuid())
+  firstName          String
+  lastName           String
+  email              String?             @unique
+  phone              String?
+  dateOfBirth        DateTime?
+  joinDate           DateTime            @default(now())
+  active             Boolean             @default(true)
+  notes              String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  assessments        Assessment[]
+  performanceRecords PerformanceRecord[]
+  warmupSessions     WarmupSession[]
+  forgeGameScores    ForgeGameScore[]
+  trainingCycles     TrainingCycle[]
+  sessionLogs        SessionLog[]
+
+  @@index([active, lastName])
+}
+
+/// Module 1 — intake assessment. Every row is a snapshot; the newest one is the
+/// member's live profile and history is kept for comparison.
+model Assessment {
+  id                    String       @id @default(cuid())
+  memberId              String
+  member                Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  shoulderMobilityLeft  String?
+  shoulderMobilityRight String?
+  shoulderNotes         String?
+  hipMobilityLeft       String?
+  hipMobilityRight      String?
+  hipNotes              String?
+  ankleMobilityLeft     String?
+  ankleMobilityRight    String?
+  ankleNotes            String?
+  thoracicMobility      String?
+  thoracicNotes         String?
+  strengthAsymmetries   String?
+  weakPoints            String[]     @default([])
+  cardioLevel           String?
+  trainingLevel         MemberLevel  @default(beginner)
+  injuryHistory         String[]     @default([])
+  areasToAvoid          String[]     @default([])
+  /// `areasToAvoid` normalised to the canonical contraindication vocabulary.
+  avoidAreas            String[]     @default([])
+  sportsBackground      String?
+  goals                 String[]     @default([])
+  constraints           String?
+  /// Derived mobility/activation needs consumed by the warm-up generator.
+  restrictionTags       String[]     @default([])
+  assessedAt            DateTime     @default(now())
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  @@index([memberId, assessedAt])
+}
+
+/// Module 3 — only the five compounds and three cardio benchmarks land here.
+model PerformanceRecord {
+  id            String           @id @default(cuid())
+  memberId      String
+  member        Member           @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  movementType  MovementType
+  movementName  String
+  phase         PerformancePhase @default(progression)
+  value         Float
+  unit          String
+  reps          Int?
+  sets          Int?
+  rpe           Float?
+  notes         String?
+  /// Cycle this result belongs to, so a new cycle re-calibrates from scratch.
+  cycleId       String?
+  cycle         TrainingCycle?   @relation(fields: [cycleId], references: [id], onDelete: SetNull)
+  recordedAt    DateTime         @default(now())
+  createdAt     DateTime         @default(now())
+
+  @@index([memberId, movementName, recordedAt])
+  @@index([memberId, recordedAt])
+  @@index([cycleId])
+}
+
+/// Module 3 — "flow" sessions the brief requires to be loggable with no data.
+model SessionLog {
+  id          String      @id @default(cuid())
+  memberId    String
+  member      Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  sessionType SessionType
+  flowSession Boolean     @default(true)
+  notes       String?
+  sessionDate DateTime    @default(now())
+  createdAt   DateTime    @default(now())
+
+  @@index([memberId, sessionDate])
+}
+
+model WarmupSession {
+  id             String      @id @default(cuid())
+  memberId       String
+  member         Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  sessionType    SessionType
+  generalWarmup  String?
+  personalDrills String?
+  coachNote      String?
+  generatedAt    DateTime    @default(now())
+  createdAt      DateTime    @default(now())
+
+  @@index([memberId, generatedAt])
+}
+
+/// Module 4 — one score per benchmark per member per month, so re-testing the
+/// same month corrects the score instead of creating a duplicate.
+model ForgeGameScore {
+  id            String   @id @default(cuid())
+  memberId      String
+  member        Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  benchmarkName String
+  value         Float
+  unit          String
+  scoreMonth    String
+  notes         String?
+  recordedAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([memberId, benchmarkName, scoreMonth])
+  @@index([memberId, scoreMonth])
+}
+
+/// Module 6B — a generated 4-8 week cycle. Always starts as `draft`: the brief
+/// makes the coach the final validator of every program.
+model TrainingCycle {
+  id            String              @id @default(cuid())
+  memberId      String
+  member        Member              @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  goal          String
+  sessionType   SessionType
+  level         MemberLevel         @default(beginner)
+  cycleLength   Int
+  mainMovement  String
+  templateName  String
+  /// Full week-by-week plan (blocks A/B/C) serialised as JSON.
+  planJson      String
+  status        CycleStatus         @default(draft)
+  coachNotes    String?
+  validatedAt   DateTime?
+  startDate     DateTime            @default(now())
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  records       PerformanceRecord[]
+
+  @@index([memberId, status])
+}
+
+/// Module 6A — the coach's own exercise library. Coach-owned CRUD; nothing
+/// else writes to this table.
+model Exercise {
+  id                String           @id @default(cuid())
+  name              String           @unique
+  category          ExerciseCategory
+  primaryMuscles    String[]         @default([])
+  secondaryMuscles  String[]         @default([])
+  movementPattern   MovementPattern
+  difficulty        Difficulty       @default(all)
+  equipment         String[]         @default([])
+  contraindications String[]         @default([])
+  loadingScheme     String?
+  coachNotes        String?
+  /// Set when this exercise *is* one of the tracked movements/benchmarks.
+  trackedMovement   String?
+  /// "studio" = everyday small-group use, "advanced" = variations for stronger members.
+  tier              String           @default("studio")
+  active            Boolean          @default(true)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([category, active])
+  @@index([movementPattern, active])
+}
