@@ -4,7 +4,9 @@ const nextConfig = {
   productionBrowserSourceMaps: false,
   poweredByHeader: false,
   eslint: {
-    ignoreDuringBuilds: true,
+    // CI lints as its own step, and the tree is clean — a lint regression
+    // should fail the build rather than ship.
+    ignoreDuringBuilds: false,
   },
   typescript: {
     ignoreBuildErrors: false,
