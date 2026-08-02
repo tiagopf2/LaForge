@@ -2,7 +2,8 @@ export const dynamic = 'force-dynamic'
 
 import { badRequest, notFound, route } from '@/lib/api'
 import { prisma } from '@/lib/prisma'
-import { FORGE_GAMES_BENCHMARKS, getBenchmark, monthKey, shiftMonth } from '@/lib/forge'
+import { getBenchmark, monthKey, shiftMonth } from '@/lib/forge'
+import { buildForgeGamesView } from '@/lib/forge-games'
 import { createForgeScoreSchema, forgeGamesQuerySchema } from '@/lib/validation'
 
 /**
@@ -13,63 +14,19 @@ import { createForgeScoreSchema, forgeGamesQuerySchema } from '@/lib/validation'
  * computed server-side (direction depends on whether lower is better).
  */
 export const GET = route(forgeGamesQuerySchema, async ({ input }) => {
-  const earliest = shiftMonth(monthKey(), -(input.months - 1))
+  // The real calendar month, not "the newest month with any score on file" —
+  // otherwise a stale month gets labelled as the current one all through the
+  // next month, and the "logged this month" count comes out wrong.
+  const currentMonth = monthKey()
+  const earliest = shiftMonth(currentMonth, -(input.months - 1))
 
   const scores = await prisma.forgeGameScore.findMany({
     where: { memberId: input.memberId, scoreMonth: { gte: earliest } },
     orderBy: [{ scoreMonth: 'asc' }, { benchmarkName: 'asc' }],
+    select: { benchmarkName: true, scoreMonth: true, value: true, notes: true },
   })
 
-  const months = [...new Set(scores.map((s) => s.scoreMonth))].sort()
-  const currentMonth = months[months.length - 1] ?? monthKey()
-  const previousMonth = months[months.length - 2] ?? null
-
-  const benchmarks = FORGE_GAMES_BENCHMARKS.map((benchmark) => {
-    const history = scores
-      .filter((s) => s.benchmarkName === benchmark.name)
-      .map((s) => ({ scoreMonth: s.scoreMonth, value: s.value, notes: s.notes }))
-
-    const current = history.find((h) => h.scoreMonth === currentMonth) ?? null
-    const previous = previousMonth
-      ? (history.find((h) => h.scoreMonth === previousMonth) ?? null)
-      : null
-
-    let changePct: number | null = null
-    let direction: 'improved' | 'regressed' | 'unchanged' | null = null
-
-    if (current && previous && previous.value !== 0) {
-      const raw = ((current.value - previous.value) / previous.value) * 100
-      // Flip timed benchmarks so a positive number always means progress.
-      changePct = Math.round((benchmark.lowerIsBetter ? -raw : raw) * 10) / 10
-      direction = changePct > 0.5 ? 'improved' : changePct < -0.5 ? 'regressed' : 'unchanged'
-    }
-
-    const best = history.length
-      ? history.reduce((acc, h) =>
-          benchmark.lowerIsBetter
-            ? h.value < acc.value
-              ? h
-              : acc
-            : h.value > acc.value
-              ? h
-              : acc
-        )
-      : null
-
-    return {
-      name: benchmark.name,
-      unit: benchmark.unit,
-      lowerIsBetter: benchmark.lowerIsBetter,
-      history,
-      current,
-      previous,
-      best,
-      changePct,
-      direction,
-    }
-  })
-
-  return { months, currentMonth, previousMonth, benchmarks }
+  return buildForgeGamesView(scores, currentMonth)
 })
 
 export const POST = route(createForgeScoreSchema, async ({ input }) => {

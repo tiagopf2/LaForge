@@ -19,7 +19,10 @@ type BenchmarkRow = {
   unit: string
   lowerIsBetter: boolean
   history: { scoreMonth: string; value: number; notes: string | null }[]
+  /** Scored in the current calendar month, or null if not tested yet. */
   current: { scoreMonth: string; value: number } | null
+  /** Most recent score whenever it happened — what the delta is measured from. */
+  latest: { scoreMonth: string; value: number } | null
   previous: { scoreMonth: string; value: number } | null
   best: { scoreMonth: string; value: number } | null
   changePct: number | null
@@ -29,7 +32,7 @@ type BenchmarkRow = {
 type ForgeGamesResponse = {
   months: string[]
   currentMonth: string
-  previousMonth: string | null
+  hasComparison: boolean
   benchmarks: BenchmarkRow[]
 }
 
@@ -153,7 +156,7 @@ export function ForgeGamesPage() {
             ))}
           </div>
 
-          {data && !data.previousMonth && (
+          {data && !data.hasComparison && (
             <p className="text-sm text-muted-foreground text-center">
               Month-over-month comparison appears once a second month of scores is on file.
             </p>
@@ -242,7 +245,7 @@ export function ForgeGamesPage() {
 }
 
 function BenchmarkCard({ benchmark }: { benchmark: BenchmarkRow }) {
-  const { current, previous, best, changePct, direction } = benchmark
+  const { current, latest, previous, best, changePct, direction } = benchmark
 
   const Icon =
     direction === 'improved' ? TrendingUp : direction === 'regressed' ? TrendingDown : Minus
@@ -273,9 +276,7 @@ function BenchmarkCard({ benchmark }: { benchmark: BenchmarkRow }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-2">
-        {!current ? (
-          <p className="text-sm text-muted-foreground">Not tested this month.</p>
-        ) : (
+        {current ? (
           <div className="flex items-baseline gap-3 flex-wrap">
             <span className="font-mono text-2xl font-bold">
               {formatValue(current.value, benchmark.unit)}
@@ -286,6 +287,22 @@ function BenchmarkCard({ benchmark }: { benchmark: BenchmarkRow }) {
               </span>
             )}
           </div>
+        ) : latest ? (
+          // Untested this month, but the earlier scores still carry a real
+          // comparison — show what the percentage badge above is measuring
+          // rather than leaving it floating over an empty card.
+          <div className="flex items-baseline gap-3 flex-wrap">
+            <span className="font-mono text-2xl font-bold text-muted-foreground">
+              {formatValue(latest.value, benchmark.unit)}
+            </span>
+            <span className="text-sm text-muted-foreground">
+              not tested this month — last in {formatMonth(latest.scoreMonth)}
+              {previous &&
+                `, was ${formatValue(previous.value, benchmark.unit)} in ${formatMonth(previous.scoreMonth)}`}
+            </span>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">No scores on file.</p>
         )}
 
         {best && (
