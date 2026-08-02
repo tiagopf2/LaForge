@@ -66,7 +66,9 @@ enum CycleStatus {
 model User {
   id             String   @id @default(cuid())
   email          String   @unique
-  name           String?
+  /// Coaches sign in with either name or email, so the name has to identify
+  /// exactly one account. Postgres allows repeated NULLs under a unique index.
+  name           String?  @unique
   hashedPassword String
   role           String   @default("coach")
   createdAt      DateTime @default(now())

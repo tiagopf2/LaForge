@@ -2,6 +2,12 @@ import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import {
+  checkLoginRateLimit,
+  clearLoginAttempts,
+  clientKey,
+  recordFailedLogin,
+} from '@/lib/rate-limit'
 
 // No Prisma adapter: this app uses stateless JWT sessions with a credentials
 // provider, and the schema intentionally has no Account/Session tables.
@@ -13,8 +19,20 @@ export const authOptions: NextAuthOptions = {
         username: { label: 'Username', type: 'text' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.username || !credentials?.password) return null
+
+        // Throttled by source address: this is the one unauthenticated endpoint
+        // in the app, guarding a single well-known coach account.
+        const key = clientKey(req?.headers as Record<string, unknown> | undefined)
+        const limit = checkLoginRateLimit(key)
+        if (!limit.allowed) {
+          console.warn(
+            `Login throttled for ${key}: too many failed attempts, ${limit.retryAfterSeconds}s remaining.`
+          )
+          return null
+        }
+
         try {
           const user = await prisma.user.findFirst({
             where: {
@@ -24,9 +42,16 @@ export const authOptions: NextAuthOptions = {
               ],
             },
           })
-          if (!user) return null
-          const isValid = await bcrypt.compare(credentials.password, user.hashedPassword)
-          if (!isValid) return null
+
+          const isValid =
+            user !== null && (await bcrypt.compare(credentials.password, user.hashedPassword))
+
+          if (!user || !isValid) {
+            recordFailedLogin(key)
+            return null
+          }
+
+          clearLoginAttempts(key)
           return { id: user.id, email: user.email, name: user.name, role: user.role }
         } catch {
           return null
