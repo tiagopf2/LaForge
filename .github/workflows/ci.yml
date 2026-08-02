@@ -1,4 +1,4 @@
-﻿name: CI
+name: CI
 
 on:
   push:
@@ -52,9 +52,8 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      # Uncomment once you add Vitest
-      # - name: Test
-      #   run: npm run test
+      - name: Test
+        run: npm run test
 
       - name: Apply migrations (validates schema)
         run: npm run db:deploy
