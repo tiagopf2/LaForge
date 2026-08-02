@@ -1,3 +1,5 @@
+// Next 16 renamed the `middleware` file convention to `proxy`. next-auth still
+// ships the helper under `next-auth/middleware`; only the file name moved.
 import { withAuth } from 'next-auth/middleware'
 
 export default withAuth({

@@ -16,7 +16,7 @@ export const badRequest = (message: string) => new ApiError(400, message)
 export const notFound = (message: string) => new ApiError(404, message)
 
 /**
- * Every route in this app is coach-only. `middleware.ts` already blocks
+ * Every route in this app is coach-only. `proxy.ts` already blocks
  * unauthenticated requests, but route handlers re-check so the API stays safe
  * if the matcher is ever edited.
  */
@@ -39,7 +39,9 @@ type Handler<S extends ZodTypeAny> = (ctx: {
  * (`z.coerce.number()`, `.default(6)`) are already applied.
  */
 export function route<S extends ZodTypeAny>(schema: S, handler: Handler<S>) {
-  return async (request: Request, segment?: { params?: Record<string, string> }) => {
+  // Next 15 made the dynamic segment a promise. Every route in the app goes
+  // through this wrapper, so awaiting it here is the only change needed.
+  return async (request: Request, segment?: { params?: Promise<Record<string, string>> }) => {
     try {
       await requireCoach()
 
@@ -50,7 +52,8 @@ export function route<S extends ZodTypeAny>(schema: S, handler: Handler<S>) {
               throw badRequest('Request body must be valid JSON')
             })
 
-      const input = schema.parse({ ...raw, ...(segment?.params ?? {}) })
+      const params = (await segment?.params) ?? {}
+      const input = schema.parse({ ...raw, ...params })
       const data = await handler({ input, request })
       return NextResponse.json(data ?? { ok: true })
     } catch (error) {

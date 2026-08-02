@@ -8,8 +8,10 @@ Out of scope by design: class booking (Glofox), billing, member-facing app.
 
 ## Stack
 
-Next.js 14 (App Router) · PostgreSQL + Prisma · NextAuth (credentials, JWT) ·
-Tailwind + shadcn/ui · Recharts
+Next.js 16 (App Router) · React 19 · PostgreSQL + Prisma · NextAuth
+(credentials, JWT) · Tailwind + shadcn/ui · Recharts
+
+Requires Node 20.9 or newer.
 
 ## Local setup
 
@@ -44,6 +46,8 @@ library from `data/exercise_library.csv`. Safe to re-run any time.
 | `npm run build` | Generates the Prisma client, then builds |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint |
+| `npm test` | Vitest, single run |
+| `npm run test:watch` | Vitest, watch mode |
 | `npm run db:migrate` | Create + apply a migration (development) |
 | `npm run db:deploy` | Apply pending migrations (any environment) |
 | `npm run db:seed` | Coach account + exercise library import |
@@ -101,12 +105,16 @@ Implemented literally, in `lib/progression.ts` — no estimation, no AI:
 
 ## Known limitations
 
-- **Next.js has open advisories that need a major upgrade.** `next@14.2.35` is
-  the newest 14.x. The remaining advisories (mostly cache poisoning and SSRF on
-  publicly-exposed deployments) are only fixed in Next 16. Worth scheduling; not
-  urgent for a studio-internal deployment on the local network.
-- Remaining `npm audit` findings beyond Next are all ESLint dev tooling and
-  never ship.
+- Two transitive advisories remain in `npm audit --omit=dev`, both inside
+  Next's own dependencies and neither fixable from here: a bundled `postcss`,
+  and `sharp` (libvips CVEs). `sharp` backs the Image Optimization API, which
+  this app does not use — `images.unoptimized` is set.
+- `react-hooks/set-state-in-effect` warns on five dashboard screens. They use
+  the fetch-on-mount pattern, which the rule that shipped with ESLint 9 flags.
+  Pre-existing rather than a regression; reworking their data loading is its
+  own change. See `eslint.config.mjs`.
+- Prisma warns that `generator client` has no explicit `output` path, which
+  Prisma 7 will require. Unrelated to the app; worth doing with that upgrade.
 - Fonts are pulled from Google Fonts at build time. On a machine with TLS
   interception the download fails and Next silently falls back to system fonts;
   self-hosting the three families would remove the build-time network call.

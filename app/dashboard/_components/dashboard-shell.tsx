@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
@@ -19,37 +19,46 @@ const navItems = [
   { href: '/dashboard/generator', label: '6B · Program Generator', icon: Sparkles },
 ]
 
-export function DashboardShell({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const pathname = usePathname()
+const isActive = (pathname: string | null, href: string) => {
+  if (href === '/dashboard') return pathname === '/dashboard'
+  return pathname?.startsWith(href) ?? false
+}
 
-  const isActive = (href: string) => {
-    if (href === '/dashboard') return pathname === '/dashboard'
-    return pathname?.startsWith(href)
-  }
-
-  const Nav = () => (
+/**
+ * Module scope on purpose. Declared inside DashboardShell this was a fresh
+ * component type on every render, so React remounted the whole nav subtree
+ * each time the sidebar toggled.
+ */
+function Nav({ pathname, onNavigate }: { pathname: string | null; onNavigate: () => void }) {
+  return (
     <nav className="flex-1 space-y-2">
       {navItems.map((item) => {
         const Icon = item.icon
+        const active = isActive(pathname, item.href)
         return (
           <Link
             key={item.href}
             href={item.href}
-            onClick={() => setSidebarOpen(false)}
+            onClick={onNavigate}
             className={cn(
               'flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-colors min-h-[52px]',
-              isActive(item.href) ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             )}
           >
             <Icon className="w-5 h-5" />
             {item.label}
-            {isActive(item.href) && <ChevronRight className="w-4 h-4 ml-auto" />}
+            {active && <ChevronRight className="w-4 h-4 ml-auto" />}
           </Link>
         )
       })}
     </nav>
   )
+}
+
+export function DashboardShell({ children }: { children: React.ReactNode }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const pathname = usePathname()
+  const closeSidebar = useCallback(() => setSidebarOpen(false), [])
 
   return (
     <div className="min-h-screen bg-background">
@@ -78,7 +87,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               </button>
             </div>
 
-            <Nav />
+            <Nav pathname={pathname} onNavigate={closeSidebar} />
 
             <Button variant="ghost" className="mt-4 justify-start text-muted-foreground min-h-[48px]" onClick={() => signOut({ callbackUrl: '/login' })}>
               <LogOut className="w-4 h-4 mr-2" /> Sign Out
@@ -96,7 +105,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
             <p className="text-xs text-muted-foreground mb-8">Coach tool • iPad-first • Capacity target: 160 members</p>
 
-            <Nav />
+            <Nav pathname={pathname} onNavigate={closeSidebar} />
 
             <Button variant="ghost" className="justify-start text-muted-foreground min-h-[48px]" onClick={() => signOut({ callbackUrl: '/login' })}>
               <LogOut className="w-4 h-4 mr-2" /> Sign Out

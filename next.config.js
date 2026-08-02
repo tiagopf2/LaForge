@@ -1,13 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // The gitignored LaForge/ clone carries its own lockfile, so Next cannot infer
+  // which directory is the workspace root. Pin it to this one.
+  turbopack: { root: __dirname },
   productionBrowserSourceMaps: false,
   poweredByHeader: false,
-  eslint: {
-    // CI lints as its own step, and the tree is clean — a lint regression
-    // should fail the build rather than ship.
-    ignoreDuringBuilds: false,
-  },
+  // No `eslint` key: Next 16 removed `next lint` and no longer runs ESLint
+  // during the build, so the setting is rejected as unrecognised. Lint is
+  // enforced by its own CI step (`npm run lint`) instead.
   typescript: {
     ignoreBuildErrors: false,
   },
