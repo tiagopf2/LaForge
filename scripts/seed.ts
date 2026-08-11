@@ -1,27 +1,18 @@
 import fs from 'fs'
 import path from 'path'
 import { PrismaClient, type Prisma } from '@prisma/client'
-import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
 /**
- * Idempotent seed: upserts the coach account and imports the coach's exercise
- * library from data/exercise_library.csv. Safe to re-run — nothing is deleted,
- * and re-running refreshes library rows from the CSV.
+ * Idempotent seed: imports the coach's exercise library from
+ * data/exercise_library.csv. Safe to re-run — nothing is deleted, and
+ * re-running refreshes library rows from the CSV.
+ *
+ * The login is deliberately not created here. Seeding reference data and
+ * handling a credential are different jobs with different risks, so the
+ * account lives in `npm run coach` and this script needs no secrets at all.
  */
-
-/**
- * The coach password comes from the environment, never from this file — the
- * repository is public and seed scripts get read by anyone.
- */
-const COACH = {
-  email: process.env.SEED_COACH_EMAIL ?? 'coach@laforge.local',
-  // Not the real coach's name: a default that ships in a public repository is
-  // a published username, which halves the work of guessing the login.
-  name: process.env.SEED_COACH_NAME ?? 'coach',
-  password: process.env.SEED_COACH_PASSWORD,
-}
 
 /** CSV exercise names that *are* one of the tracked movements/benchmarks. */
 const TRACKED_ALIASES: Record<string, string> = {
@@ -99,46 +90,6 @@ const list = (value: string) =>
     .map((v) => v.trim().toLowerCase())
     .filter(Boolean)
 
-async function seedCoach() {
-  const existing = await prisma.user.findUnique({ where: { email: COACH.email } })
-
-  // An account that already exists keeps its current password, so re-seeding to
-  // refresh the exercise library never needs the secret to be present.
-  if (existing) {
-    console.log(`Coach account already present: ${existing.name}`)
-    return
-  }
-
-  if (!COACH.password) {
-    console.warn(
-      'SEED_COACH_PASSWORD is not set — skipping coach account creation.\n' +
-        'Add it to .env (see .env.example) and re-run to create the login.'
-    )
-    return
-  }
-
-  // The account this protects holds every member's injury and health history,
-  // and it is the only credential in the system. Refuse to create it with the
-  // placeholder from .env.example or anything trivially guessable.
-  if (COACH.password.length < 12 || COACH.password === 'choose-a-strong-password') {
-    console.error(
-      'SEED_COACH_PASSWORD must be a real password of at least 12 characters — aborting.'
-    )
-    process.exit(1)
-  }
-
-  const hashedPassword = await bcrypt.hash(COACH.password, 12)
-  await prisma.user.create({
-    data: {
-      email: COACH.email,
-      name: COACH.name,
-      hashedPassword,
-      role: 'coach',
-    },
-  })
-  console.log(`Coach account created: ${COACH.name}`)
-}
-
 async function seedExerciseLibrary() {
   const csvPath = path.resolve(process.cwd(), 'data/exercise_library.csv')
   if (!fs.existsSync(csvPath)) {
@@ -193,7 +144,6 @@ async function seedExerciseLibrary() {
 }
 
 async function main() {
-  await seedCoach()
   await seedExerciseLibrary()
   console.log('Seed completed successfully.')
 }

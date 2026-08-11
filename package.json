@@ -14,7 +14,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
-    "coach:set-password": "tsx --require dotenv/config scripts/set-coach-password.ts"
+    "coach": "tsx --require dotenv/config scripts/coach.ts"
   },
   "prisma": {
     "seed": "tsx --require dotenv/config scripts/safe-seed.ts"

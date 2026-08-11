@@ -25,18 +25,19 @@ Requires Node 20.9 or newer.
    ```
 
 2. **Configure the environment.** Copy `.env.example` to `.env` and fill in
-   `DATABASE_URL`, `NEXTAUTH_SECRET` and `SEED_COACH_PASSWORD`.
+   `DATABASE_URL`, `NEXTAUTH_SECRET` and `COACH_PASSWORD`.
 
-3. **Install, migrate, seed, run:**
+3. **Install, migrate, seed, create the login, run:**
 
 ```bash
-npm install && npm run db:deploy && npm run db:seed && npm run dev
+npm install && npm run db:deploy && npm run db:seed && npm run coach && npm run dev
 ```
 
-The app is at http://localhost:3000.
+The app is at http://localhost:3000. Blank out `COACH_PASSWORD` in `.env` once
+`npm run coach` has applied it — it is not needed again until you change it.
 
-The seed is idempotent — it upserts the coach account and refreshes the exercise
-library from `data/exercise_library.csv`. Safe to re-run any time.
+The seed is idempotent — it refreshes the exercise library from
+`data/exercise_library.csv` and touches nothing else. Safe to re-run any time.
 
 ## Scripts
 
@@ -50,21 +51,35 @@ library from `data/exercise_library.csv`. Safe to re-run any time.
 | `npm run test:watch` | Vitest, watch mode |
 | `npm run db:migrate` | Create + apply a migration (development) |
 | `npm run db:deploy` | Apply pending migrations (any environment) |
-| `npm run db:seed` | Coach account + exercise library import |
+| `npm run db:seed` | Exercise library import |
 | `npm run db:studio` | Prisma Studio |
+| `npm run coach` | Create the coach login, or change its password |
 
-## Coach accounts
+## The coach login
 
-The first `npm run db:seed` on an empty database creates the coach login from
-`SEED_COACH_EMAIL` / `SEED_COACH_NAME` / `SEED_COACH_PASSWORD` in `.env`.
-Passwords are bcrypt-hashed and **never** stored in the repository.
+One command handles the account, whether it exists yet or not:
 
-Re-seeding leaves an existing account alone — it only refreshes the exercise
-library — so the secret is only needed once. To add a second coach, set the
-three variables to the new values and run the seed again.
+```bash
+npm run coach
+```
 
-`scripts/safe-seed.ts` refuses to run if the seed file contains any `delete` or
-`deleteMany` call, so seeding can never wipe member data.
+It reads `COACH_EMAIL` and `COACH_PASSWORD` from `.env` — creating the account
+the first time, changing the password on later runs, and doing nothing at all if
+the password is already the one on file. Blank `COACH_PASSWORD` again afterwards
+so it is not left sitting on disk. Passwords are bcrypt-hashed and **never**
+stored in the repository.
+
+It refuses a password under 12 characters, and refuses one that matches the
+database password in `DATABASE_URL` — sharing those means a single leaked
+credential opens both the app and the database.
+
+Sign-in accepts the account's email or its name. Changing the password does not
+end sessions already issued, because they are stateless JWTs; rotate
+`NEXTAUTH_SECRET` to invalidate every session at once.
+
+Seeding handles reference data only and needs no secrets. `scripts/safe-seed.ts`
+refuses to run if the seed file contains any `delete` or `deleteMany` call, so
+seeding can never wipe member data.
 
 ## Modules
 
