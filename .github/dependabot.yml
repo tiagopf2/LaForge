@@ -1,0 +1,22 @@
+version: 2
+
+updates:
+  # The app carries members' injury and health history, so a known-vulnerable
+  # transitive package should not sit unnoticed between manual audits.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # One PR per week for routine bumps; security advisories still open their
+      # own PR immediately, outside this group.
+      npm-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

@@ -44,6 +44,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Blocking gate. The runtime tree has no advisories at any severity, so
+      # this can be strict: anything reaching the deployed app fails the build.
+      # Dev-only advisories are reported by the next step instead, so a broken
+      # test-tooling dependency cannot block a member-facing fix.
+      - name: Audit runtime dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+      # Advisory only: prints the full picture, dev dependencies included, so a
+      # new advisory is visible in the log without failing unrelated work.
+      - name: Audit all dependencies (report only)
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
       - name: Generate Prisma client
         run: npx prisma generate
 
