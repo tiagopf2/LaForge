@@ -9,6 +9,16 @@ import {
   recordFailedLogin,
 } from '@/lib/rate-limit'
 
+/**
+ * bcrypt hash of a random string that is not any account's password.
+ *
+ * Compared against when the username does not exist, so a wrong username and a
+ * wrong password cost the same time. Without it an unknown username returns in
+ * microseconds while a known one pays for a cost-12 hash, which is a clear
+ * enough signal to enumerate the coach account name.
+ */
+const DUMMY_HASH = '$2a$12$iOaayY/BBgIY20VKh7y6d.vtqkVlkMJfAkkPOkPC39UViajGJSVcS'
+
 // No Prisma adapter: this app uses stateless JWT sessions with a credentials
 // provider, and the schema intentionally has no Account/Session tables.
 export const authOptions: NextAuthOptions = {
@@ -43,8 +53,11 @@ export const authOptions: NextAuthOptions = {
             },
           })
 
-          const isValid =
-            user !== null && (await bcrypt.compare(credentials.password, user.hashedPassword))
+          // Always hash, even with no matching user, to keep the timing flat.
+          const isValid = await bcrypt.compare(
+            credentials.password,
+            user?.hashedPassword ?? DUMMY_HASH
+          )
 
           if (!user || !isValid) {
             recordFailedLogin(key)

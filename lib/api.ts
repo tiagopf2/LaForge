@@ -23,6 +23,15 @@ export const notFound = (message: string) => new ApiError(404, message)
 async function requireCoach() {
   const session = await getServerSession(authOptions)
   if (!session?.user) throw new ApiError(401, 'Unauthorized')
+
+  // The role is copied from the database row into the JWT at sign-in, so a
+  // session can only carry `coach` if the account had it. Checking it here
+  // means adding a non-coach account later cannot silently grant full member
+  // access — the routes would have to opt that role in deliberately.
+  if ((session.user as { role?: string }).role !== 'coach') {
+    throw new ApiError(403, 'Forbidden')
+  }
+
   return session
 }
 

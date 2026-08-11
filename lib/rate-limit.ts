@@ -10,8 +10,24 @@
 
 /** Attempts allowed per key before the key is locked out. */
 export const MAX_ATTEMPTS = 8
+/**
+ * Attempts allowed across *all* keys in the same window.
+ *
+ * `clientKey` reads `x-forwarded-for`, which an attacker can vary per request
+ * to get a fresh bucket every time and so never trip the per-key limit. This
+ * second counter cannot be escaped that way: it has no key to rotate. It sits
+ * well above the per-key limit so ordinary mistyping by the one coach who uses
+ * this app never reaches it.
+ */
+export const GLOBAL_MAX_ATTEMPTS = 40
 /** Both the counting window and the lockout length. */
 export const WINDOW_MS = 15 * 60 * 1000
+
+/**
+ * Bucket name for the all-sources counter. Leading whitespace is stripped from
+ * every real key by `clientKey`, so this cannot collide with a client address.
+ */
+const GLOBAL_KEY = '  all-sources  '
 
 type Bucket = {
   count: number
@@ -35,19 +51,26 @@ function prune(now: number) {
   }
 }
 
+/** Remaining lockout for one bucket, or 0 when it is not blocked. */
+function blockedFor(key: string, now: number): number {
+  const bucket = buckets.get(key)
+  if (!bucket?.blockedUntil || bucket.blockedUntil <= now) return 0
+  return Math.ceil((bucket.blockedUntil - now) / 1000)
+}
+
 export function checkLoginRateLimit(key: string, now: number = Date.now()): RateLimitResult {
   prune(now)
 
-  const bucket = buckets.get(key)
-  if (!bucket?.blockedUntil || bucket.blockedUntil <= now) return { allowed: true }
+  // The longer of the two lockouts wins, so reporting either one is honest
+  // about when the caller may try again.
+  const retryAfterSeconds = Math.max(blockedFor(key, now), blockedFor(GLOBAL_KEY, now))
+  if (retryAfterSeconds === 0) return { allowed: true }
 
-  return {
-    allowed: false,
-    retryAfterSeconds: Math.ceil((bucket.blockedUntil - now) / 1000),
-  }
+  return { allowed: false, retryAfterSeconds }
 }
 
-export function recordFailedLogin(key: string, now: number = Date.now()): void {
+/** Adds one failure to a bucket, locking it out once it reaches `max`. */
+function bump(key: string, max: number, now: number): void {
   const bucket = buckets.get(key)
 
   // No bucket yet, or the previous window has rolled over: start counting again.
@@ -57,12 +80,21 @@ export function recordFailedLogin(key: string, now: number = Date.now()): void {
   }
 
   bucket.count += 1
-  if (bucket.count >= MAX_ATTEMPTS) bucket.blockedUntil = now + WINDOW_MS
+  if (bucket.count >= max) bucket.blockedUntil = now + WINDOW_MS
+}
+
+export function recordFailedLogin(key: string, now: number = Date.now()): void {
+  bump(key, MAX_ATTEMPTS, now)
+  bump(GLOBAL_KEY, GLOBAL_MAX_ATTEMPTS, now)
 }
 
 /** Called on a successful sign-in so a coach who mistyped is not left throttled. */
 export function clearLoginAttempts(key: string): void {
   buckets.delete(key)
+  // A correct password proves the traffic is not a spraying run, so the
+  // all-sources counter is cleared too — otherwise noise from elsewhere on the
+  // network could lock the coach out mid-session.
+  buckets.delete(GLOBAL_KEY)
 }
 
 /** Test-only: drops all state so cases cannot leak into each other. */
@@ -73,10 +105,10 @@ export function resetLoginRateLimit(): void {
 /**
  * Best-effort client identity for throttling.
  *
- * `x-forwarded-for` is spoofable unless a trusted proxy sets it, which is
- * acceptable here: the app is not internet-facing, and an attacker who can
- * already forge headers on the studio LAN is past this control anyway. Requests
- * with no usable address share one bucket rather than escaping the limit.
+ * `x-forwarded-for` is spoofable unless a trusted proxy sets it. Rotating it
+ * defeats the per-key limit but not the all-sources limit above, which is why
+ * that second counter exists. Requests with no usable address share one bucket
+ * rather than escaping the limit.
  */
 export function clientKey(headers: Record<string, unknown> | undefined): string {
   const forwarded = headers?.['x-forwarded-for']

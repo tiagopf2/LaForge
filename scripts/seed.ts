@@ -16,8 +16,10 @@ const prisma = new PrismaClient()
  * repository is public and seed scripts get read by anyone.
  */
 const COACH = {
-  email: process.env.SEED_COACH_EMAIL ?? 'octavehesloin@laforge.local',
-  name: process.env.SEED_COACH_NAME ?? 'OctaveHesloin',
+  email: process.env.SEED_COACH_EMAIL ?? 'coach@laforge.local',
+  // Not the real coach's name: a default that ships in a public repository is
+  // a published username, which halves the work of guessing the login.
+  name: process.env.SEED_COACH_NAME ?? 'coach',
   password: process.env.SEED_COACH_PASSWORD,
 }
 
@@ -113,6 +115,16 @@ async function seedCoach() {
         'Add it to .env (see .env.example) and re-run to create the login.'
     )
     return
+  }
+
+  // The account this protects holds every member's injury and health history,
+  // and it is the only credential in the system. Refuse to create it with the
+  // placeholder from .env.example or anything trivially guessable.
+  if (COACH.password.length < 12 || COACH.password === 'choose-a-strong-password') {
+    console.error(
+      'SEED_COACH_PASSWORD must be a real password of at least 12 characters — aborting.'
+    )
+    process.exit(1)
   }
 
   const hashedPassword = await bcrypt.hash(COACH.password, 12)
