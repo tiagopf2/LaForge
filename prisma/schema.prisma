@@ -1,5 +1,12 @@
 generator client {
   provider = "prisma-client-js"
+  // `native` covers local development and CI, both of which run the client on
+  // the same machine that generated it. Netlify does not: it builds on Ubuntu
+  // but runs the functions on Amazon Linux, so the engine `native` produces
+  // there is the wrong one and every route handler fails at runtime with
+  // "could not locate the Query Engine". Naming the Lambda target explicitly
+  // makes `prisma generate` emit that engine too.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
