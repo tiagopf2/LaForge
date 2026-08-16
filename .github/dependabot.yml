@@ -15,6 +15,24 @@ updates:
         update-types:
           - minor
           - patch
+    ignore:
+      # Prisma 7 is a deliberate migration, not a dependency bump: it makes the
+      # generator's `output` argument mandatory and lands on the code this app
+      # is most exposed to — the raw upsert and BigInt handling in
+      # lib/rate-limit.ts, and the binaryTargets that keep the query engine
+      # matching the Lambda runtime. The bot's PR fails CI, and merging it on a
+      # green run would be worse. Both packages are listed because they version
+      # in lockstep and would otherwise arrive as two separate PRs.
+      #
+      # Security advisories are NOT suppressed by this: Dependabot still opens
+      # those regardless of an ignore rule, which is the point of the rule being
+      # scoped to major versions only.
+      - dependency-name: prisma
+        update-types:
+          - version-update:semver-major
+      - dependency-name: '@prisma/client'
+        update-types:
+          - version-update:semver-major
 
   - package-ecosystem: github-actions
     directory: /
