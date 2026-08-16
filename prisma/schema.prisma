@@ -82,6 +82,36 @@ model User {
   updatedAt      DateTime @updatedAt
 }
 
+/// One counter bucket for the login throttle in `lib/rate-limit.ts`.
+///
+/// This lives in the database rather than in process memory because the app
+/// runs as serverless functions: each container would otherwise keep its own
+/// counters, and the effective limit would multiply by however many containers
+/// happen to be warm. Rows here are transient — `recordFailedLogin` deletes
+/// buckets once their window has passed and any lockout has expired.
+/// Times here are epoch milliseconds rather than `DateTime`, because the
+/// counting is done by a raw upsert while the reads go through the query
+/// builder. Those two disagree about `timestamp without time zone`: the query
+/// builder writes UTC, raw parameters are serialised in the server's local
+/// zone, and a bucket written by one and compared by the other is wrong by the
+/// offset. Integers have no zone to get wrong, and the module's clock is
+/// already a `number`.
+model LoginAttempt {
+  /// The client address, or the reserved name of the all-sources counter.
+  key            String  @id
+  count          Int     @default(0)
+  /// Start of the current counting window. Failures older than one window roll
+  /// the bucket over rather than accumulating, so slow guessing never adds up.
+  firstAttemptAt BigInt
+  /// Set once `count` reaches the limit; null while the bucket is only counting.
+  blockedUntil   BigInt?
+
+  /// Supports the prune sweep, which is the one query that scans rather than
+  /// looking a bucket up by key. It matters under a spraying run, where the
+  /// table gains a row per forged address.
+  @@index([firstAttemptAt])
+}
+
 model Member {
   id                 String              @id @default(cuid())
   firstName          String

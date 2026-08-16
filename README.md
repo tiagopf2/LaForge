@@ -47,13 +47,20 @@ The seed is idempotent — it refreshes the exercise library from
 | `npm run build` | Generates the Prisma client, then builds |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint |
-| `npm test` | Vitest, single run |
+| `npm test` | Vitest, single run — needs the database (see below) |
 | `npm run test:watch` | Vitest, watch mode |
 | `npm run db:migrate` | Create + apply a migration (development) |
 | `npm run db:deploy` | Apply pending migrations (any environment) |
 | `npm run db:seed` | Exercise library import |
 | `npm run db:studio` | Prisma Studio |
 | `npm run coach` | Create the coach login, or change its password |
+
+Most tests are pure functions, but the login throttle keeps its counters in a
+table and its tests run against the real thing rather than a stand-in — the
+property they check is that counting survives being shared between processes,
+which only the SQL provides. So `npm test` needs `DATABASE_URL` set and
+`npm run db:deploy` already run. They use the `LoginAttempt` table only, and
+clear it between cases; no other data is touched.
 
 ## The coach login
 

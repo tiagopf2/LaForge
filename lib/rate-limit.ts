@@ -1,12 +1,17 @@
 /**
- * In-memory login throttle.
+ * Login throttle, backed by the `LoginAttempt` table.
  *
- * The studio runs a single Next instance on its own network, so a module-level
- * Map is enough — there is no second process to share counters with. If this
- * app is ever scaled past one instance, this must move to the database or a
- * shared cache, because each instance would otherwise keep its own count and
- * the effective limit would multiply by the instance count.
+ * This used to be a module-level Map, which was correct while the app ran as a
+ * single process on the studio's own network. Under serverless it was not: each
+ * warm container kept its own counters and cold starts dropped them, so the
+ * effective limit was `MAX_ATTEMPTS` times however many containers happened to
+ * be alive — which is to say, no limit worth relying on.
+ *
+ * Counting now happens in Postgres, in a single statement per bucket, so
+ * concurrent containers increment the same row instead of racing each other.
  */
+
+import { prisma } from '@/lib/prisma'
 
 /** Attempts allowed per key before the key is locked out. */
 export const MAX_ATTEMPTS = 8
@@ -29,77 +34,120 @@ export const WINDOW_MS = 15 * 60 * 1000
  */
 const GLOBAL_KEY = '  all-sources  '
 
-type Bucket = {
-  count: number
-  firstAttemptAt: number
-  blockedUntil: number | null
-}
-
-const buckets = new Map<string, Bucket>()
-
 export type RateLimitResult = { allowed: true } | { allowed: false; retryAfterSeconds: number }
 
 /**
- * Drops buckets that are outside their window and not serving a lockout, so a
- * long-running process does not accumulate one entry per source address.
+ * Whether either the caller's bucket or the all-sources bucket is serving a
+ * lockout, and for how much longer.
+ *
+ * Throws if the database is unreachable. `authorize` treats that as a failed
+ * sign-in, which is the right way round: a login cannot succeed without the
+ * database either, so failing closed here costs nothing and never leaves the
+ * one unauthenticated endpoint running unthrottled.
+ */
+export async function checkLoginRateLimit(
+  key: string,
+  now: number = Date.now()
+): Promise<RateLimitResult> {
+  const blocked = await prisma.loginAttempt.findMany({
+    where: {
+      key: { in: [key, GLOBAL_KEY] },
+      blockedUntil: { gt: now },
+    },
+    select: { blockedUntil: true },
+  })
+
+  if (blocked.length === 0) return { allowed: true }
+
+  // The longer of the two lockouts wins, so reporting it is honest about when
+  // the caller may actually try again.
+  const latest = Math.max(...blocked.map((row) => Number(row.blockedUntil)))
+  return { allowed: false, retryAfterSeconds: Math.ceil((latest - now) / 1000) }
+}
+
+/**
+ * Adds one failure to a bucket, locking it out once it reaches `max`.
+ *
+ * Written as one upsert so the read, the increment and the lockout decision
+ * cannot be split across concurrent containers. A bucket whose window has
+ * already passed is reset rather than incremented, which is what stops slow
+ * guessing from accumulating into a lockout over hours.
+ */
+function bump(key: string, max: number, now: number) {
+  // BigInt rather than number, so these bind as int8 and compare against the
+  // column without an implicit cast.
+  const at = BigInt(now)
+  const windowStart = BigInt(now - WINDOW_MS)
+  const blockUntil = BigInt(now + WINDOW_MS)
+
+  return prisma.$executeRaw`
+    INSERT INTO "LoginAttempt" ("key", "count", "firstAttemptAt", "blockedUntil")
+    VALUES (${key}, 1, ${at}, NULL)
+    ON CONFLICT ("key") DO UPDATE SET
+      "count" = CASE
+        WHEN "LoginAttempt"."firstAttemptAt" < ${windowStart} THEN 1
+        ELSE "LoginAttempt"."count" + 1
+      END,
+      "firstAttemptAt" = CASE
+        WHEN "LoginAttempt"."firstAttemptAt" < ${windowStart} THEN ${at}
+        ELSE "LoginAttempt"."firstAttemptAt"
+      END,
+      "blockedUntil" = CASE
+        WHEN "LoginAttempt"."firstAttemptAt" < ${windowStart} THEN NULL
+        WHEN "LoginAttempt"."count" + 1 >= ${max} THEN ${blockUntil}
+        ELSE "LoginAttempt"."blockedUntil"
+      END
+  `
+}
+
+/**
+ * Drops buckets that are outside their window and not serving a lockout.
+ *
+ * This runs on failure rather than on every check, because failure is the only
+ * thing that creates rows — and under a spraying run, which forges a fresh
+ * address per request, it is the only thing that makes the table grow.
  */
 function prune(now: number) {
-  for (const [key, bucket] of buckets) {
-    const windowOver = now - bucket.firstAttemptAt > WINDOW_MS
-    const lockoutOver = (bucket.blockedUntil ?? 0) <= now
-    if (windowOver && lockoutOver) buckets.delete(key)
-  }
+  return prisma.loginAttempt.deleteMany({
+    where: {
+      firstAttemptAt: { lt: now - WINDOW_MS },
+      OR: [{ blockedUntil: null }, { blockedUntil: { lte: now } }],
+    },
+  })
 }
 
-/** Remaining lockout for one bucket, or 0 when it is not blocked. */
-function blockedFor(key: string, now: number): number {
-  const bucket = buckets.get(key)
-  if (!bucket?.blockedUntil || bucket.blockedUntil <= now) return 0
-  return Math.ceil((bucket.blockedUntil - now) / 1000)
-}
+export async function recordFailedLogin(key: string, now: number = Date.now()): Promise<void> {
+  // Both bumps must land before the next check reads them, so they share a
+  // transaction. They lock in a fixed order — the caller's bucket, then the
+  // all-sources bucket — so concurrent failures queue behind each other rather
+  // than deadlocking.
+  await prisma.$transaction([
+    bump(key, MAX_ATTEMPTS, now),
+    bump(GLOBAL_KEY, GLOBAL_MAX_ATTEMPTS, now),
+  ])
 
-export function checkLoginRateLimit(key: string, now: number = Date.now()): RateLimitResult {
-  prune(now)
-
-  // The longer of the two lockouts wins, so reporting either one is honest
-  // about when the caller may try again.
-  const retryAfterSeconds = Math.max(blockedFor(key, now), blockedFor(GLOBAL_KEY, now))
-  if (retryAfterSeconds === 0) return { allowed: true }
-
-  return { allowed: false, retryAfterSeconds }
-}
-
-/** Adds one failure to a bucket, locking it out once it reaches `max`. */
-function bump(key: string, max: number, now: number): void {
-  const bucket = buckets.get(key)
-
-  // No bucket yet, or the previous window has rolled over: start counting again.
-  if (!bucket || now - bucket.firstAttemptAt > WINDOW_MS) {
-    buckets.set(key, { count: 1, firstAttemptAt: now, blockedUntil: null })
-    return
-  }
-
-  bucket.count += 1
-  if (bucket.count >= max) bucket.blockedUntil = now + WINDOW_MS
-}
-
-export function recordFailedLogin(key: string, now: number = Date.now()): void {
-  bump(key, MAX_ATTEMPTS, now)
-  bump(GLOBAL_KEY, GLOBAL_MAX_ATTEMPTS, now)
+  // Housekeeping, deliberately outside that transaction and best-effort. It
+  // deletes rows a concurrent bump may be holding, which inside the transaction
+  // would mean taking locks in an order the bumps do not — the one shape that
+  // could deadlock them. Nothing depends on a sweep having happened.
+  await prune(now).catch(() => {})
 }
 
 /** Called on a successful sign-in so a coach who mistyped is not left throttled. */
-export function clearLoginAttempts(key: string): void {
-  buckets.delete(key)
-  // A correct password proves the traffic is not a spraying run, so the
-  // all-sources counter is cleared too — otherwise noise from elsewhere on the
-  // network could lock the coach out mid-session.
-  buckets.delete(GLOBAL_KEY)
+export async function clearLoginAttempts(key: string): Promise<void> {
+  await prisma.loginAttempt.deleteMany({
+    where: {
+      // A correct password proves the traffic is not a spraying run, so the
+      // all-sources counter goes too — otherwise noise from elsewhere on the
+      // network could lock the coach out mid-session.
+      key: { in: [key, GLOBAL_KEY] },
+    },
+  })
 }
 
 /** Test-only: drops all state so cases cannot leak into each other. */
-export function resetLoginRateLimit(): void {
-  buckets.clear()
+export async function resetLoginRateLimit(): Promise<void> {
+  await prisma.loginAttempt.deleteMany({})
 }
 
 /**
