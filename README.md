@@ -8,8 +8,10 @@ Out of scope by design: class booking (Glofox), billing, member-facing app.
 
 ## Stack
 
-Next.js 14 (App Router) · PostgreSQL + Prisma · NextAuth (credentials, JWT) ·
-Tailwind + shadcn/ui · Recharts
+Next.js 16 (App Router) · React 19 · PostgreSQL + Prisma · NextAuth
+(credentials, JWT) · Tailwind + shadcn/ui · Recharts
+
+Requires Node 20.9 or newer.
 
 ## Local setup
 
@@ -23,18 +25,19 @@ Tailwind + shadcn/ui · Recharts
    ```
 
 2. **Configure the environment.** Copy `.env.example` to `.env` and fill in
-   `DATABASE_URL`, `NEXTAUTH_SECRET` and `SEED_COACH_PASSWORD`.
+   `DATABASE_URL`, `NEXTAUTH_SECRET` and `COACH_PASSWORD`.
 
-3. **Install, migrate, seed, run:**
+3. **Install, migrate, seed, create the login, run:**
 
 ```bash
-npm install && npm run db:deploy && npm run db:seed && npm run dev
+npm install && npm run db:deploy && npm run db:seed && npm run coach && npm run dev
 ```
 
-The app is at http://localhost:3000.
+The app is at http://localhost:3000. Blank out `COACH_PASSWORD` in `.env` once
+`npm run coach` has applied it — it is not needed again until you change it.
 
-The seed is idempotent — it upserts the coach account and refreshes the exercise
-library from `data/exercise_library.csv`. Safe to re-run any time.
+The seed is idempotent — it refreshes the exercise library from
+`data/exercise_library.csv` and touches nothing else. Safe to re-run any time.
 
 ## Scripts
 
@@ -44,23 +47,46 @@ library from `data/exercise_library.csv`. Safe to re-run any time.
 | `npm run build` | Generates the Prisma client, then builds |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint |
+| `npm test` | Vitest, single run — needs the database (see below) |
+| `npm run test:watch` | Vitest, watch mode |
 | `npm run db:migrate` | Create + apply a migration (development) |
 | `npm run db:deploy` | Apply pending migrations (any environment) |
-| `npm run db:seed` | Coach account + exercise library import |
+| `npm run db:seed` | Exercise library import |
 | `npm run db:studio` | Prisma Studio |
+| `npm run coach` | Create the coach login, or change its password |
 
-## Coach accounts
+Most tests are pure functions, but the login throttle keeps its counters in a
+table and its tests run against the real thing rather than a stand-in — the
+property they check is that counting survives being shared between processes,
+which only the SQL provides. So `npm test` needs `DATABASE_URL` set and
+`npm run db:deploy` already run. They use the `LoginAttempt` table only, and
+clear it between cases; no other data is touched.
 
-The first `npm run db:seed` on an empty database creates the coach login from
-`SEED_COACH_EMAIL` / `SEED_COACH_NAME` / `SEED_COACH_PASSWORD` in `.env`.
-Passwords are bcrypt-hashed and **never** stored in the repository.
+## The coach login
 
-Re-seeding leaves an existing account alone — it only refreshes the exercise
-library — so the secret is only needed once. To add a second coach, set the
-three variables to the new values and run the seed again.
+One command handles the account, whether it exists yet or not:
 
-`scripts/safe-seed.ts` refuses to run if the seed file contains any `delete` or
-`deleteMany` call, so seeding can never wipe member data.
+```bash
+npm run coach
+```
+
+It reads `COACH_EMAIL` and `COACH_PASSWORD` from `.env` — creating the account
+the first time, changing the password on later runs, and doing nothing at all if
+the password is already the one on file. Blank `COACH_PASSWORD` again afterwards
+so it is not left sitting on disk. Passwords are bcrypt-hashed and **never**
+stored in the repository.
+
+It refuses a password under 12 characters, and refuses one that matches the
+database password in `DATABASE_URL` — sharing those means a single leaked
+credential opens both the app and the database.
+
+Sign-in accepts the account's email or its name. Changing the password does not
+end sessions already issued, because they are stateless JWTs; rotate
+`NEXTAUTH_SECRET` to invalidate every session at once.
+
+Seeding handles reference data only and needs no secrets. `scripts/safe-seed.ts`
+refuses to run if the seed file contains any `delete` or `deleteMany` call, so
+seeding can never wipe member data.
 
 ## Modules
 
@@ -101,12 +127,16 @@ Implemented literally, in `lib/progression.ts` — no estimation, no AI:
 
 ## Known limitations
 
-- **Next.js has open advisories that need a major upgrade.** `next@14.2.35` is
-  the newest 14.x. The remaining advisories (mostly cache poisoning and SSRF on
-  publicly-exposed deployments) are only fixed in Next 16. Worth scheduling; not
-  urgent for a studio-internal deployment on the local network.
-- Remaining `npm audit` findings beyond Next are all ESLint dev tooling and
-  never ship.
+- Two transitive advisories remain in `npm audit --omit=dev`, both inside
+  Next's own dependencies and neither fixable from here: a bundled `postcss`,
+  and `sharp` (libvips CVEs). `sharp` backs the Image Optimization API, which
+  this app does not use — `images.unoptimized` is set.
+- `react-hooks/set-state-in-effect` warns on five dashboard screens. They use
+  the fetch-on-mount pattern, which the rule that shipped with ESLint 9 flags.
+  Pre-existing rather than a regression; reworking their data loading is its
+  own change. See `eslint.config.mjs`.
+- Prisma warns that `generator client` has no explicit `output` path, which
+  Prisma 7 will require. Unrelated to the app; worth doing with that upgrade.
 - Fonts are pulled from Google Fonts at build time. On a machine with TLS
   interception the download fails and Next silently falls back to system fonts;
   self-hosting the three families would remove the build-time network call.

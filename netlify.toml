@@ -1,0 +1,27 @@
+# Netlify build configuration.
+#
+# Netlify installs its Next.js runtime automatically and would infer all of
+# this on its own. It is written out anyway so the deploy does not silently
+# change shape if that inference ever guesses differently.
+
+[build]
+  # `npm run build` is `prisma generate && next build`. The generate step is
+  # what produces the Amazon Linux query engine named in prisma/schema.prisma,
+  # so it has to run here rather than being cached from a local install.
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  # Kept in step with .nvmrc and the Node version in .github/workflows/ci.yml,
+  # so the build machine, CI and the developer machine agree. Next 16 needs
+  # 20.9 or newer; 22 is also Netlify's current default.
+  NODE_VERSION = "22"
+
+# Migrations are deliberately NOT part of the build. `prisma migrate deploy`
+# here would run on every deploy — including deploy previews, which point at
+# the same DATABASE_URL — and concurrent deploys would race each other against
+# a database holding real member data. Run it by hand instead:
+#
+#   npm run db:deploy && npm run db:seed && npm run coach
+#
+# with DATABASE_URL pointed at the hosted database. See README.md.

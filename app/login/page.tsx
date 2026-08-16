@@ -61,7 +61,9 @@ export default function LoginPage() {
                 <Input
                   id="username"
                   type="text"
-                  placeholder="OctaveHesloin"
+                  // Deliberately generic: the repository is public, so the real
+                  // coach account name should not be printed on the login form.
+                  placeholder="Username"
                   value={username}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
                   className="pl-10 h-12"
