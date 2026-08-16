@@ -1,5 +1,10 @@
 import { defineConfig } from 'vitest/config'
-import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+// `.mts` is loaded as ESM, where `__dirname` does not exist. `import.meta.dirname`
+// would read better but is not typed by the @types/node this project pins, so
+// derive it from the module URL instead — that works on every Node version.
+const rootDir = fileURLToPath(new URL('.', import.meta.url))
 
 export default defineConfig({
   test: {
@@ -14,7 +19,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, './'),
+      '@': rootDir,
     },
   },
 })
