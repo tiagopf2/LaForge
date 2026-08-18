@@ -88,6 +88,70 @@ Seeding handles reference data only and needs no secrets. `scripts/safe-seed.ts`
 refuses to run if the seed file contains any `delete` or `deleteMany` call, so
 seeding can never wipe member data.
 
+## Deployment
+
+Netlify, rebuilding from `main` on every push: https://laforgeoctave.netlify.app.
+The build settings live in `netlify.toml` rather than in the Netlify UI, so a
+deploy cannot silently change shape if Netlify's inference ever guesses
+differently.
+
+The hosted database is Neon, in `us-east-2` to match Netlify's default function
+region — the app-to-database hop stays inside one datacenter. There are two
+branches: production, and a `preview` branch that deploy previews point at. A
+Neon branch is a copy-on-write clone, so a freshly created one already holds the
+schema and the seeded library and needs no migrate or seed of its own.
+
+Netlify is always given the **pooled** connection string. Migrations are run by
+hand against the **direct** one, which is why the datasource in
+`prisma/schema.prisma` needs no `directUrl`.
+
+`binaryTargets` in that same file is what makes the deploy work at all: Netlify
+builds on Ubuntu but runs functions on Amazon Linux, so naming the Lambda engine
+explicitly is the difference between working route handlers and every one of
+them failing with "could not locate the Query Engine".
+
+### Environment variables
+
+Set per Netlify deploy context, never site-wide:
+
+| Variable | `production` | `deploy-preview` |
+|---|---|---|
+| `DATABASE_URL` | production branch, pooled | `preview` branch, pooled |
+| `NEXTAUTH_SECRET` | its own value | a different value |
+| `NEXTAUTH_URL` | the site URL | unset |
+| `AUTH_TRUST_HOST` | unset | `true` |
+
+The database split is the point of the exercise: sharing one `DATABASE_URL`
+would let a deploy preview write to real member data, and would let concurrent
+deploys race each other against it. Separate secrets mean a leaked preview
+session cookie cannot be replayed against production.
+
+`NEXTAUTH_URL` cannot be set for previews, because every pull request gets its
+own hostname and a context variable holds one static value. NextAuth derives the
+origin from the request only when `AUTH_TRUST_HOST` is set (or when it detects
+Vercel), and otherwise falls back to `http://localhost:3000` — so previews need
+the flag. Production must *not* have it: trusting an inbound `Host` header on
+the real origin is a header-injection vector, and production has an explicit
+`NEXTAUTH_URL` anyway.
+
+### Migrations
+
+Deliberately not part of the build, for the reason spelled out in
+`netlify.toml`. Run them from a developer machine with `DATABASE_URL` pointed at
+the direct string for whichever branch is being migrated:
+
+```bash
+npm run db:deploy && npm run db:seed && npm run coach
+```
+
+`npm run coach` is only needed when first setting a database up, or to change
+the password afterwards.
+
+A preview branch is frozen at the moment it was cloned, so a new migration on
+`main` leaves it behind. Recreating the branch from production is usually less
+work than migrating it, but its connection string changes, so `DATABASE_URL` on
+the `deploy-preview` context has to be updated to match.
+
 ## Modules
 
 | Module | Route | Notes |
@@ -141,3 +205,8 @@ Implemented literally, in `lib/progression.ts` — no estimation, no AI:
   interception the download fails and Next silently falls back to system fonts;
   self-hosting the three families would remove the build-time network call.
 - No offline/PWA support yet. The brief implies it for gym conditions.
+- Deploy previews have no `NEXTAUTH_URL`, which has two harmless consequences:
+  `metadataBase` in `app/layout.tsx` falls back to `http://localhost:3000`, so
+  Open Graph URLs in preview HTML are wrong, and NextAuth derives its
+  secure-cookie flag from that variable, so preview session cookies are not
+  marked `Secure`. Both are confined to previews and neither affects production.
