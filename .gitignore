@@ -35,3 +35,6 @@ coverage/
 # Leftover clone of this very repository, made before the project itself was
 # put under version control. Safe to delete from disk.
 LaForge/
+
+# Local Netlify folder
+.netlify
