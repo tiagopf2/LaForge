@@ -141,3 +141,5 @@ Implemented literally, in `lib/progression.ts` — no estimation, no AI:
   interception the download fails and Next silently falls back to system fonts;
   self-hosting the three families would remove the build-time network call.
 - No offline/PWA support yet. The brief implies it for gym conditions.
+
+<!-- Throwaway PR to verify Netlify deploy previews. Will be closed unmerged. -->
