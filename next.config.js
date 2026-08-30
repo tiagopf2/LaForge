@@ -28,9 +28,29 @@ const contentSecurityPolicy = [
   ...(isDev ? [] : ['upgrade-insecure-requests']),
 ].join('; ')
 
+/**
+ * Base URL for `metadataBase` in app/layout.tsx, resolved once at build time.
+ *
+ * Production sets NEXTAUTH_URL, so it wins where it exists. Deploy previews
+ * deliberately do not set it -- a preview URL is per-PR and a Netlify variable
+ * holds one static value per context, so there is nothing correct to put there.
+ * That left previews falling back to localhost and emitting og:image as
+ * http://localhost:3000/og-image.png.
+ *
+ * DEPLOY_PRIME_URL is Netlify's per-deploy URL and fills that gap: each preview
+ * builds separately, so each build sees its own address.
+ *
+ * Resolved here rather than read directly in the layout because DEPLOY_PRIME_URL
+ * is a *build* variable and is not guaranteed to exist in the function runtime.
+ * Next inlines this value at build time, which is when it is actually available.
+ */
+const siteUrl =
+  process.env.NEXTAUTH_URL || process.env.DEPLOY_PRIME_URL || 'http://localhost:3000'
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  env: { SITE_URL: siteUrl },
   // The gitignored LaForge/ clone carries its own lockfile, so Next cannot infer
   // which directory is the workspace root. Pin it to this one.
   turbopack: { root: __dirname },

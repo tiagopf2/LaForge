@@ -11,7 +11,9 @@ const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mon
 export const metadata = {
   title: 'La Forge — Coach Tool MVP',
   description: 'Internal iPad-first coaching tool for assessment, tracking, and progression',
-  metadataBase: new URL(process.env.NEXTAUTH_URL || 'http://localhost:3000'),
+  // Resolved in next.config.js: NEXTAUTH_URL in production, Netlify's
+  // DEPLOY_PRIME_URL on deploy previews, localhost in development.
+  metadataBase: new URL(process.env.SITE_URL || 'http://localhost:3000'),
   icons: {
     icon: '/favicon.svg',
     shortcut: '/favicon.svg',
