@@ -1,7 +1,68 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { ZodError, type ZodTypeAny, type output } from 'zod'
+import { ZodError, z, type ZodTypeAny, type output } from 'zod'
 import { authOptions } from '@/lib/auth'
+
+/**
+ * Restores readable validation messages for the coach.
+ *
+ * Zod 4 rewrote its default messages for developers rather than end users:
+ * a missing field became "Invalid input: expected string, received undefined"
+ * instead of "Required", and a bad enum stopped reporting the value that was
+ * actually sent -- the most useful half of that message when a request is
+ * being debugged. `toResponse` below puts these straight in front of the coach
+ * as `field: message`, so the wording is user-facing text, not a developer
+ * detail.
+ *
+ * Only Zod's own defaults are replaced. A message written into a schema always
+ * wins over this map, so 'Enter a valid email' and 'must look like 2026-07' in
+ * lib/validation.ts are untouched. Returning undefined for anything not handled
+ * here falls back to Zod's default rather than inventing a worse one.
+ *
+ * This is global configuration, and it lives here because `route()` below is
+ * the only place in the app that parses anything -- so the config is always in
+ * effect wherever a schema is actually used.
+ */
+const quote = (v: unknown) => (typeof v === 'string' ? `'${v}'` : String(v))
+
+z.config({
+  customError: (issue) => {
+    const input = (issue as { input?: unknown }).input
+
+    switch (issue.code) {
+      case 'invalid_type':
+        // Zod reports a missing key and a wrong-typed value with the same code.
+        // Undefined input is the missing one, and "Required" is what a coach
+        // looking at a form needs to read.
+        return input === undefined
+          ? 'Required'
+          : `Expected ${(issue as { expected?: string }).expected}, received ${typeof input}`
+
+      case 'invalid_value': {
+        const values = (issue as { values?: readonly unknown[] }).values
+        if (!values?.length) return undefined
+        return `Expected ${values.map(quote).join(' | ')}, received ${quote(input)}`
+      }
+
+      case 'too_small': {
+        const { minimum, origin } = issue as { minimum?: number; origin?: string }
+        return origin === 'string'
+          ? `Must be at least ${minimum} characters`
+          : `Must be at least ${minimum}`
+      }
+
+      case 'too_big': {
+        const { maximum, origin } = issue as { maximum?: number; origin?: string }
+        return origin === 'string'
+          ? `Must be at most ${maximum} characters`
+          : `Must be at most ${maximum}`
+      }
+
+      default:
+        return undefined
+    }
+  },
+})
 
 export class ApiError extends Error {
   constructor(
