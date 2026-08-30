@@ -48,6 +48,15 @@ jobs:
       # this can be strict: anything reaching the deployed app fails the build.
       # Dev-only advisories are reported by the next step instead, so a broken
       # test-tooling dependency cannot block a member-facing fix.
+      #
+      # `--omit=dev` does not drop `prisma` here, even though it is a
+      # devDependency: `@prisma/client` declares it as an *optional peer*, so
+      # npm marks it `devOptional` in the lockfile and audits it as if it might
+      # ship. That is why the `deepmerge-ts` override exists in package.json --
+      # the advisory reaches this gate through `prisma > @prisma/config`, and no
+      # Prisma 6.x release has bumped past the vulnerable range. Do not "fix"
+      # this by adding `--omit=optional`: that would also hide sharp's native
+      # binaries, which Next really does ship for image optimization.
       - name: Audit runtime dependencies
         run: npm audit --omit=dev --audit-level=high
 
