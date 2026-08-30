@@ -34,6 +34,33 @@ updates:
         update-types:
           - version-update:semver-major
 
+      # `@types/node` tracks the Node version the app actually runs on, which
+      # is 22 everywhere: .nvmrc, netlify.toml and .github/workflows/ci.yml.
+      # Letting it run ahead makes TypeScript accept APIs that do not exist in
+      # the deployed runtime — a green typecheck and a crash in a Lambda. Bump
+      # it deliberately, in the same commit that raises Node itself.
+      - dependency-name: '@types/node'
+        update-types:
+          - version-update:semver-major
+
+      # Tailwind 4 moves configuration out of tailwind.config.ts and into CSS,
+      # so the bot's PR cannot carry the migration and fails on the config file
+      # it leaves behind. tailwind-merge majors are pinned to a Tailwind major
+      # and quietly change how `cn()` resolves conflicting classes, which no
+      # test covers — the two have to move together, by hand.
+      - dependency-name: tailwindcss
+        update-types:
+          - version-update:semver-major
+      - dependency-name: tailwind-merge
+        update-types:
+          - version-update:semver-major
+
+      # typescript-eslint refuses to load under TS 7 and fails the lint step
+      # outright. Nothing to decide here until it ships support upstream.
+      - dependency-name: typescript
+        update-types:
+          - version-update:semver-major
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
