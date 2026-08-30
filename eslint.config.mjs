@@ -16,6 +16,11 @@ const config = [
       // at it; the ESLint CLI walks the whole tree, so it has to be excluded
       // explicitly or its stale copies get linted alongside the real files.
       'LaForge/**',
+      // Same problem, different source: Claude Code checks worktrees out here,
+      // and each is a full copy of the project. Linting them reports hundreds
+      // of duplicate problems against files that are not the ones being
+      // edited. vitest.config.mts excludes this path for the same reason.
+      '.claude/worktrees/**',
     ],
   },
   ...nextCoreWebVitals,
