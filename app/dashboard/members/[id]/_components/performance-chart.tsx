@@ -50,7 +50,10 @@ export default function PerformanceChart({ records, movementName }: { records: R
             tick={{ fontSize: 10 }}
             label={{ value: records?.[0]?.unit === 'kg' ? 'kg' : 'sec', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fontSize: 11 } }}
           />
-          <Tooltip contentStyle={{ fontSize: 11 }} />
+          <Tooltip
+            contentStyle={{ fontSize: 11 }}
+            formatter={(value, _name, item) => [item?.payload?.label ?? `${value ?? 0}`, movementName]}
+          />
           <Line
             type="monotone"
             dataKey="value"
