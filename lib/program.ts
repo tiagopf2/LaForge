@@ -90,6 +90,20 @@ export type CyclePlan = {
   weeks: CycleWeek[]
 }
 
+/**
+ * The plan shape an earlier generator wrote: one `blocks` summary for the whole
+ * cycle rather than a week-by-week `weeks` array. Nothing produces it any more,
+ * but rows in that shape are still in the database, so the member view needs to
+ * be able to name what it is looking at.
+ */
+export type LegacyPlan = {
+  cycleLength?: number
+  blocks?: Record<
+    string,
+    { movement?: string; logic?: string; format?: string; template?: string[] }
+  >
+}
+
 /** Default main lift per session type; the coach can override it. */
 const DEFAULT_MAIN_MOVEMENT: Record<SessionType, StrengthMovement> = {
   upper: 'Bench Press',

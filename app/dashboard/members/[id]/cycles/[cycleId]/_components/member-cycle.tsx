@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Check } from 'lucide-react'
+import { ArrowLeft, AlertTriangle, Check, Sparkles } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -10,7 +10,8 @@ import { toast } from 'sonner'
 import { FadeIn } from '@/components/ui/animate'
 import { apiGet, apiSend } from '@/lib/client'
 import { CyclePlanView } from '@/components/cycle-plan-view'
-import type { CyclePlan } from '@/lib/program'
+import { Badge } from '@/components/ui/badge'
+import type { CyclePlan, LegacyPlan } from '@/lib/program'
 
 type Cycle = {
   id: string
@@ -25,6 +26,7 @@ type Cycle = {
   createdAt: string
   validatedAt: string | null
   plan: CyclePlan | null
+  legacyPlan: LegacyPlan | null
   member: { id: string; firstName: string; lastName: string }
 }
 
@@ -107,11 +109,27 @@ export function MemberCyclePage({ memberId, cycleId }: { memberId: string; cycle
     )
   }
 
+  const title = `${cycle.member.firstName} ${cycle.member.lastName} — ${cycle.templateName}`
+
   return (
     <div className="space-y-6">
       <FadeIn>{backLink}</FadeIn>
 
-      {cycle.plan === null ? (
+      {cycle.plan ? (
+        <CyclePlanView
+          plan={cycle.plan}
+          title={title}
+          status={cycle.status}
+          meta={
+            <>
+              Generated {formatDate(cycle.createdAt)} · starts {formatDate(cycle.startDate)}
+              {cycle.validatedAt ? ` · validated ${formatDate(cycle.validatedAt)}` : ''}
+            </>
+          }
+        />
+      ) : cycle.legacyPlan ? (
+        <LegacyCycleCard cycle={cycle} title={title} />
+      ) : (
         <Card className="border-0" style={{ boxShadow: 'var(--shadow-md)' }}>
           <CardContent className="p-6 space-y-1">
             <p className="font-medium">{cycle.templateName}</p>
@@ -121,18 +139,6 @@ export function MemberCyclePage({ memberId, cycleId }: { memberId: string; cycle
             </p>
           </CardContent>
         </Card>
-      ) : (
-        <CyclePlanView
-          plan={cycle.plan}
-          title={`${cycle.member.firstName} ${cycle.member.lastName} — ${cycle.templateName}`}
-          status={cycle.status}
-          meta={
-            <>
-              Generated {formatDate(cycle.createdAt)} · starts {formatDate(cycle.startDate)}
-              {cycle.validatedAt ? ` · validated ${formatDate(cycle.validatedAt)}` : ''}
-            </>
-          }
-        />
       )}
 
       <Card className="border-0" style={{ boxShadow: 'var(--shadow-md)' }}>
@@ -159,6 +165,73 @@ export function MemberCyclePage({ memberId, cycleId }: { memberId: string; cycle
           )}
         </CardContent>
       </Card>
+    </div>
+  )
+}
+
+const BLOCK_LABELS: Record<string, string> = {
+  blockA: 'Block A — Main Movement',
+  blockB: 'Block B — Structured Accessory Work',
+  blockC: 'Block C — Conditioning Finisher',
+}
+
+/**
+ * A cycle saved by the earlier generator. It has no weeks to page through, so
+ * this shows the block summary it does carry and points at the generator, which
+ * is the only way to get a week-by-week plan for this member.
+ */
+function LegacyCycleCard({ cycle, title }: { cycle: Cycle; title: string }) {
+  const blocks = Object.entries(cycle.legacyPlan?.blocks ?? {})
+
+  return (
+    <div className="space-y-4">
+      <Card className="border-0" style={{ boxShadow: 'var(--shadow-lg)' }}>
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <CardTitle className="text-lg">{title}</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                {cycle.mainMovement} · {cycle.goal} · {cycle.sessionType} · {cycle.cycleLength} weeks
+                · generated {formatDate(cycle.createdAt)}
+              </p>
+            </div>
+            <Badge variant="secondary">{cycle.status}</Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <p className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 rounded-lg p-3">
+            <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+            This cycle was saved before the current generator, so it has a single block summary
+            rather than a week-by-week plan. Generate a new cycle to get one.
+          </p>
+        </CardContent>
+      </Card>
+
+      {blocks.map(([key, block]) => (
+        <Card key={key} className="border-0" style={{ boxShadow: 'var(--shadow-md)' }}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">{BLOCK_LABELS[key] ?? key}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1.5">
+            {block.movement && <p className="font-display font-bold text-lg">{block.movement}</p>}
+            {block.format && <p className="text-sm">{block.format}</p>}
+            {block.logic && <p className="text-sm text-muted-foreground">{block.logic}</p>}
+            {block.template && block.template.length > 0 && (
+              <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-0.5">
+                {block.template.map((line, i) => (
+                  <li key={i}>{line}</li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+
+      <Link href={`/dashboard/generator?memberId=${cycle.member.id}`}>
+        <Button className="h-12">
+          <Sparkles className="w-4 h-4 mr-2" /> Generate a new cycle
+        </Button>
+      </Link>
     </div>
   )
 }

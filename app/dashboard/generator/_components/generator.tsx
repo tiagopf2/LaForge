@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Sparkles, AlertTriangle, Check } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -32,7 +33,10 @@ type GenerateResponse = {
 
 export function GeneratorPage() {
   const { members } = useMembers()
-  const [memberId, setMemberId] = useState('')
+  // Reached with a member already in mind when the coach came from that
+  // member's file rather than from the nav.
+  const searchParams = useSearchParams()
+  const [memberId, setMemberId] = useState(searchParams?.get('memberId') ?? '')
   const [goal, setGoal] = useState<string>('General Fitness')
   const [sessionType, setSessionType] = useState<SessionType>('full')
   const [cycleLength, setCycleLength] = useState(6)
