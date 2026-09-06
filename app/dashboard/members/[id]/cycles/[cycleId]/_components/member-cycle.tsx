@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, AlertTriangle, Check, Sparkles } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { ArrowLeft, AlertTriangle, Check, Sparkles, Trash2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
 import { FadeIn } from '@/components/ui/animate'
@@ -28,6 +30,7 @@ type Cycle = {
   plan: CyclePlan | null
   legacyPlan: LegacyPlan | null
   member: { id: string; firstName: string; lastName: string }
+  _count: { records: number }
 }
 
 const formatDate = (value: string) => new Date(value).toLocaleDateString('en-GB')
@@ -42,6 +45,9 @@ export function MemberCyclePage({ memberId, cycleId }: { memberId: string; cycle
   const [loading, setLoading] = useState(true)
   const [coachNotes, setCoachNotes] = useState('')
   const [validating, setValidating] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const router = useRouter()
 
   const load = useCallback(async () => {
     if (!cycleId) return
@@ -74,6 +80,21 @@ export function MemberCyclePage({ memberId, cycleId }: { memberId: string; cycle
       toast.error((error as Error).message)
     } finally {
       setValidating(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!cycle) return
+    setDeleting(true)
+    try {
+      await apiSend(`/api/cycles/${cycle.id}`, 'DELETE')
+      toast.success('Cycle deleted')
+      // The cycle this page is about is gone, so there is nothing left to show.
+      router.push(`/dashboard/members/${memberId}`)
+      router.refresh()
+    } catch (error) {
+      toast.error((error as Error).message)
+      setDeleting(false)
     }
   }
 
@@ -165,6 +186,71 @@ export function MemberCyclePage({ memberId, cycleId }: { memberId: string; cycle
           )}
         </CardContent>
       </Card>
+
+      <Card className="border-0 print-hidden" style={{ boxShadow: 'var(--shadow-sm)' }}>
+        <CardContent className="p-4 flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <p className="text-sm font-medium">Delete this cycle</p>
+            <p className="text-xs text-muted-foreground">
+              Removes the plan from {cycle.member.firstName}&apos;s file. Logged results are kept.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            className="shrink-0 text-destructive hover:bg-destructive/10"
+            onClick={() => setConfirmDelete(true)}
+          >
+            <Trash2 className="w-4 h-4 mr-2" /> Delete Cycle
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Dialog open={confirmDelete} onOpenChange={(open) => !open && setConfirmDelete(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete this cycle?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="p-3 rounded-lg bg-muted/50">
+              <p className="font-medium">{cycle.templateName}</p>
+              <p className="text-sm text-muted-foreground">
+                {cycle.mainMovement} · {cycle.cycleLength} weeks · {cycle.status} · generated{' '}
+                {formatDate(cycle.createdAt)}
+              </p>
+            </div>
+            {cycle.status === 'validated' && (
+              <p className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 rounded-lg p-3">
+                <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                This cycle was validated, so it may be the plan {cycle.member.firstName} is training
+                right now.
+              </p>
+            )}
+            <p className="text-sm text-muted-foreground">
+              {cycle._count.records > 0
+                ? `The ${cycle._count.records} result${cycle._count.records === 1 ? '' : 's'} logged against this cycle are kept — they just stop being linked to it. The plan itself cannot be recovered.`
+                : 'No results are logged against this cycle. This cannot be undone.'}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1 h-12"
+                onClick={() => setConfirmDelete(false)}
+                disabled={deleting}
+              >
+                Keep it
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1 h-12"
+                onClick={handleDelete}
+                loading={deleting}
+              >
+                <Trash2 className="w-4 h-4 mr-2" /> Delete
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
