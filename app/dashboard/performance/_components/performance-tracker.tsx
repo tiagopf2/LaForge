@@ -37,7 +37,25 @@ type Record_ = {
   recordedAt: string
 }
 
-const EMPTY_FORM = {
+/** `yyyy-mm-dd` for a date input, in the coach's own timezone. */
+function toDateInput(date: Date) {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+  return local.toISOString().slice(0, 10)
+}
+
+/**
+ * The date input gives back a bare day. A session logged today keeps the
+ * current time so several results on the same day stay in the order they were
+ * entered; a back-dated one lands at local midday, which reads as the right day
+ * in the coach's timezone rather than slipping either side of it.
+ */
+function toTimestamp(dateInput: string) {
+  const today = toDateInput(new Date())
+  if (!dateInput || dateInput === today) return new Date().toISOString()
+  return new Date(`${dateInput}T12:00:00`).toISOString()
+}
+
+const emptyForm = () => ({
   movementType: 'strength' as 'strength' | 'cardio',
   movementName: '',
   phase: 'progression' as 'calibration' | 'progression',
@@ -46,7 +64,10 @@ const EMPTY_FORM = {
   sets: '3',
   rpe: '',
   notes: '',
-}
+  // Results are usually logged during the session, but the coach can back-date
+  // one so the progress chart spreads over the dates it was actually trained.
+  recordedAt: toDateInput(new Date()),
+})
 
 export function PerformancePage() {
   const { members } = useMembers()
@@ -57,7 +78,7 @@ export function PerformancePage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [flowOpen, setFlowOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [form, setForm] = useState(EMPTY_FORM)
+  const [form, setForm] = useState(emptyForm)
   const [flowForm, setFlowForm] = useState({ sessionType: 'full' as SessionType, notes: '' })
 
   const member = members.find((m) => m.id === memberId)
@@ -111,10 +132,11 @@ export function PerformancePage() {
         sets: form.movementType === 'strength' ? Number(form.sets) : null,
         rpe: form.movementType === 'strength' && form.rpe ? Number(form.rpe) : null,
         notes: form.notes || null,
+        recordedAt: toTimestamp(form.recordedAt),
       })
       toast.success('Result recorded')
       setDialogOpen(false)
-      setForm(EMPTY_FORM)
+      setForm(emptyForm())
       load()
     } catch (error) {
       toast.error((error as Error).message)
@@ -189,7 +211,7 @@ export function PerformancePage() {
                     latest={latestByMovement.get(movement)}
                     suggestion={suggestions[movement]}
                     onLog={() => {
-                      setForm({ ...EMPTY_FORM, movementType: 'strength', movementName: movement })
+                      setForm({ ...emptyForm(), movementType: 'strength', movementName: movement })
                       setDialogOpen(true)
                     }}
                   />
@@ -207,7 +229,7 @@ export function PerformancePage() {
                     latest={latestByMovement.get(movement)}
                     suggestion={suggestions[movement]}
                     onLog={() => {
-                      setForm({ ...EMPTY_FORM, movementType: 'cardio', movementName: movement })
+                      setForm({ ...emptyForm(), movementType: 'cardio', movementName: movement })
                       setDialogOpen(true)
                     }}
                   />
@@ -230,7 +252,7 @@ export function PerformancePage() {
                 <button
                   key={type}
                   type="button"
-                  onClick={() => setForm({ ...EMPTY_FORM, movementType: type })}
+                  onClick={() => setForm({ ...emptyForm(), movementType: type })}
                   className={cn(
                     'flex-1 py-3 rounded-xl font-medium text-sm capitalize transition-colors',
                     form.movementType === type ? 'bg-primary text-primary-foreground' : 'bg-muted'
@@ -358,6 +380,20 @@ export function PerformancePage() {
                 />
               </div>
             )}
+
+            <div className="space-y-1.5">
+              <Label>Date</Label>
+              <Input
+                type="date"
+                value={form.recordedAt}
+                max={toDateInput(new Date())}
+                onChange={(e) => setForm({ ...form, recordedAt: e.target.value })}
+                className="h-12"
+              />
+              <p className="text-xs text-muted-foreground">
+                Defaults to today. Back-date it when you are catching up on a past session.
+              </p>
+            </div>
 
             <div className="space-y-1.5">
               <Label>Notes (optional)</Label>
