@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ArrowLeft, Activity, TrendingUp, Clock, Target, Trophy, Sparkles,
-  Lightbulb, AlertCircle, CheckCircle2, Wind,
+  Lightbulb, AlertCircle, CheckCircle2, Wind, ChevronRight,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -388,20 +388,25 @@ export function MemberDetailPage({ memberId }: { memberId: string }) {
               ) : (
                 <div className="space-y-2">
                   {member.trainingCycles.map((cycle: any) => (
-                    <div
+                    <Link
                       key={cycle.id}
-                      className="p-3 rounded-lg bg-muted/50 flex items-center justify-between gap-3 text-sm"
+                      href={`/dashboard/members/${memberId}/cycles/${cycle.id}`}
+                      className="p-3 rounded-lg bg-muted/50 hover:bg-muted flex items-center justify-between gap-3 text-sm transition-colors"
                     >
                       <div>
-                        <p>{cycle.templateName}</p>
+                        <p className="font-medium">{cycle.templateName}</p>
                         <p className="text-xs text-muted-foreground">
-                          {cycle.mainMovement} · {cycle.cycleLength} weeks
+                          {cycle.mainMovement} · {cycle.cycleLength} weeks · generated{' '}
+                          {new Date(cycle.createdAt).toLocaleDateString('en-GB')}
                         </p>
                       </div>
-                      <Badge variant={cycle.status === 'validated' ? 'default' : 'secondary'}>
-                        {cycle.status}
-                      </Badge>
-                    </div>
+                      <span className="flex items-center gap-2 shrink-0">
+                        <Badge variant={cycle.status === 'validated' ? 'default' : 'secondary'}>
+                          {cycle.status}
+                        </Badge>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      </span>
+                    </Link>
                   ))}
                 </div>
               )}

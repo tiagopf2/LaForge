@@ -164,6 +164,8 @@ export const generateProgramSchema = z.object({
   mainMovement: z.enum(STRENGTH_MOVEMENTS).optional(),
 })
 
+export const cycleIdSchema = z.object({ id })
+
 export const updateCycleSchema = z.object({
   id,
   status: z.enum(['draft', 'validated', 'archived']).optional(),
