@@ -117,6 +117,8 @@ export const performanceQuerySchema = z.object({
 
 export const suggestQuerySchema = z.object({ memberId: id })
 
+export const performanceIdSchema = z.object({ id })
+
 /** Flow sessions ------------------------------------------------------- */
 
 export const createSessionLogSchema = z.object({
