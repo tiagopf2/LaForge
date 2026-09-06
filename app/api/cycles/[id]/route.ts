@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { notFound, route } from '@/lib/api'
 import { prisma } from '@/lib/prisma'
-import type { CyclePlan } from '@/lib/program'
+import type { CyclePlan, LegacyPlan } from '@/lib/program'
 import { cycleIdSchema, updateCycleSchema } from '@/lib/validation'
 
 /**
@@ -17,20 +17,43 @@ export const GET = route(cycleIdSchema, async ({ input }) => {
   if (!cycle) throw notFound('Cycle not found')
 
   const { planJson, ...rest } = cycle
-  return { ...rest, plan: parsePlan(planJson) }
+  return { ...rest, ...parsePlan(planJson) }
 })
 
 /**
- * A plan is written by the generator and only ever edited through the schema,
- * so bad JSON here means a hand-edited row. Returning null lets the page say
- * so instead of failing the whole request.
+ * Sorts a stored plan into the shape the current generator writes and anything
+ * older.
+ *
+ * The database still holds cycles from an earlier generator, whose plan is a
+ * single `blocks` summary rather than a week-by-week `weeks` array. Handing one
+ * of those to the week view renders an empty cycle, so they are separated here
+ * and the page shows what the row does carry instead.
+ *
+ * Unparseable JSON means a hand-edited row; both fields come back null so the
+ * page can say so rather than the request failing.
  */
-function parsePlan(planJson: string): CyclePlan | null {
+function parsePlan(planJson: string): { plan: CyclePlan | null; legacyPlan: LegacyPlan | null } {
+  let parsed: unknown
   try {
-    return JSON.parse(planJson) as CyclePlan
+    parsed = JSON.parse(planJson)
   } catch {
-    return null
+    return { plan: null, legacyPlan: null }
   }
+
+  if (isCyclePlan(parsed)) return { plan: parsed, legacyPlan: null }
+  return { plan: null, legacyPlan: isLegacyPlan(parsed) ? parsed : null }
+}
+
+function isCyclePlan(value: unknown): value is CyclePlan {
+  return isObject(value) && Array.isArray(value.weeks) && value.weeks.length > 0
+}
+
+function isLegacyPlan(value: unknown): value is LegacyPlan {
+  return isObject(value) && isObject(value.blocks)
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
 }
 
 /**
