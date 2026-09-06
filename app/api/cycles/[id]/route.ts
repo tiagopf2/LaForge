@@ -12,12 +12,36 @@ import { cycleIdSchema, updateCycleSchema } from '@/lib/validation'
 export const GET = route(cycleIdSchema, async ({ input }) => {
   const cycle = await prisma.trainingCycle.findUnique({
     where: { id: input.id },
-    include: { member: { select: { id: true, firstName: true, lastName: true } } },
+    include: {
+      member: { select: { id: true, firstName: true, lastName: true } },
+      // Surfaced so the delete confirmation can say how many logged results
+      // point at this cycle.
+      _count: { select: { records: true } },
+    },
   })
   if (!cycle) throw notFound('Cycle not found')
 
   const { planJson, ...rest } = cycle
   return { ...rest, ...parsePlan(planJson) }
+})
+
+/**
+ * Removes a cycle outright.
+ *
+ * `PerformanceRecord.cycleId` is `onDelete: SetNull`, so the results logged
+ * against this cycle survive and only lose the link back to it. The measurement
+ * is the member's history; the cycle is the plan that prompted it, and a plan
+ * the coach no longer wants is theirs to discard.
+ */
+export const DELETE = route(cycleIdSchema, async ({ input }) => {
+  const cycle = await prisma.trainingCycle.findUnique({
+    where: { id: input.id },
+    select: { id: true },
+  })
+  if (!cycle) throw notFound('Cycle not found')
+
+  await prisma.trainingCycle.delete({ where: { id: input.id } })
+  return { ok: true }
 })
 
 /**
