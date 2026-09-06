@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { BarChart3, Plus, TrendingUp, TrendingDown, Minus, Wind } from 'lucide-react'
+import { BarChart3, Plus, TrendingUp, TrendingDown, Minus, Wind, Trash2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -84,6 +84,10 @@ export function PerformancePage() {
   const [submitting, setSubmitting] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [flowForm, setFlowForm] = useState({ sessionType: 'full' as SessionType, notes: '' })
+  // Deleting a result is not undoable, so it goes through a confirmation that
+  // names the exact row rather than firing straight off the list.
+  const [pendingDelete, setPendingDelete] = useState<Record_ | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const member = members.find((m) => m.id === memberId)
 
@@ -146,6 +150,21 @@ export function PerformancePage() {
       toast.error((error as Error).message)
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!pendingDelete) return
+    setDeleting(true)
+    try {
+      await apiSend(`/api/performance/${pendingDelete.id}`, 'DELETE')
+      toast.success('Result deleted')
+      setPendingDelete(null)
+      load()
+    } catch (error) {
+      toast.error((error as Error).message)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -242,6 +261,54 @@ export function PerformancePage() {
             </Stagger>
           </TabsContent>
         </Tabs>
+      )}
+
+      {/* The cards above only ever show each movement's latest result, so a
+          mistyped row had nowhere to be seen, let alone corrected. */}
+      {memberId && records.length > 0 && (
+        <Card className="border-0" style={{ boxShadow: 'var(--shadow-md)' }}>
+          <CardContent className="p-4">
+            <p className="font-medium mb-3">Logged Results</p>
+            <div className="space-y-1.5">
+              {records.slice(0, 20).map((record) => (
+                <div
+                  key={record.id}
+                  className="flex items-center justify-between gap-3 p-2.5 rounded-lg bg-muted/50"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm truncate">{record.movementName}</p>
+                    <p className="text-xs text-muted-foreground font-mono">
+                      {record.unit === 'kg'
+                        ? `${record.value}kg · ${record.sets}×${record.reps} · ${record.phase}`
+                        : formatSeconds(record.value)}
+                      {' · '}
+                      {new Date(record.recordedAt).toLocaleDateString('en-GB', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    data-compact
+                    aria-label={`Delete ${record.movementName} result`}
+                    className="shrink-0 text-muted-foreground hover:text-destructive"
+                    onClick={() => setPendingDelete(record)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+            {records.length > 20 && (
+              <p className="text-xs text-muted-foreground mt-3">
+                Showing the 20 most recent of {records.length} results.
+              </p>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* Log a tracked result */}
@@ -460,6 +527,56 @@ export function PerformancePage() {
             <Button className="w-full h-12" onClick={handleFlowSession} loading={submitting}>
               Log Session
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation — the row is named so the coach can see exactly
+          which result is about to go. */}
+      <Dialog open={pendingDelete !== null} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete this result?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            {pendingDelete && (
+              <div className="p-3 rounded-lg bg-muted/50">
+                <p className="font-medium">{pendingDelete.movementName}</p>
+                <p className="text-sm text-muted-foreground font-mono">
+                  {pendingDelete.unit === 'kg'
+                    ? `${pendingDelete.value}kg · ${pendingDelete.sets}×${pendingDelete.reps} · ${pendingDelete.phase}`
+                    : formatSeconds(pendingDelete.value)}
+                  {' · '}
+                  {new Date(pendingDelete.recordedAt).toLocaleDateString('en-GB', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                  })}
+                </p>
+              </div>
+            )}
+            <p className="text-sm text-muted-foreground">
+              This cannot be undone. The progress chart and the next-session suggestion both read
+              every result for the movement, so removing this one changes them.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1 h-12"
+                onClick={() => setPendingDelete(null)}
+                disabled={deleting}
+              >
+                Keep it
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1 h-12"
+                onClick={handleDelete}
+                loading={deleting}
+              >
+                <Trash2 className="w-4 h-4 mr-2" /> Delete
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
