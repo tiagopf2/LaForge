@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { BarChart3, Plus, TrendingUp, TrendingDown, Minus, Wind } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -71,7 +72,10 @@ const emptyForm = () => ({
 
 export function PerformancePage() {
   const { members } = useMembers()
-  const [memberId, setMemberId] = useState('')
+  // The member file links here with the member already chosen, so honour that
+  // rather than making the coach pick them a second time.
+  const searchParams = useSearchParams()
+  const [memberId, setMemberId] = useState(searchParams?.get('memberId') ?? '')
   const [records, setRecords] = useState<Record_[]>([])
   const [suggestions, setSuggestions] = useState<Record<string, Suggestion>>({})
 
