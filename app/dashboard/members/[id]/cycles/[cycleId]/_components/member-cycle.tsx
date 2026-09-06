@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, AlertTriangle, Check, Sparkles, Trash2 } from 'lucide-react'
+import { ArrowLeft, AlertTriangle, Archive, ArchiveRestore, Check, Sparkles, Trash2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -47,6 +47,7 @@ export function MemberCyclePage({ memberId, cycleId }: { memberId: string; cycle
   const [validating, setValidating] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [archiving, setArchiving] = useState(false)
   const router = useRouter()
 
   const load = useCallback(async () => {
@@ -80,6 +81,27 @@ export function MemberCyclePage({ memberId, cycleId }: { memberId: string; cycle
       toast.error((error as Error).message)
     } finally {
       setValidating(false)
+    }
+  }
+
+  /**
+   * Archiving is the reversible counterpart to deleting: the plan stays on the
+   * member's file and out of the way. Coming back out, a cycle that was ever
+   * validated returns to validated -- `validatedAt` survives archiving, so the
+   * status it had before is recoverable without storing it separately.
+   */
+  const handleArchiveToggle = async () => {
+    if (!cycle) return
+    const next = cycle.status === 'archived' ? (cycle.validatedAt ? 'validated' : 'draft') : 'archived'
+    setArchiving(true)
+    try {
+      await apiSend(`/api/cycles/${cycle.id}`, 'PATCH', { status: next })
+      toast.success(next === 'archived' ? 'Cycle archived' : 'Cycle restored')
+      load()
+    } catch (error) {
+      toast.error((error as Error).message)
+    } finally {
+      setArchiving(false)
     }
   }
 
@@ -167,9 +189,15 @@ export function MemberCyclePage({ memberId, cycleId }: { memberId: string; cycle
           <CardTitle className="text-base">Coach Validation</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {cycle.status === 'validated' ? (
+          {/* Only a draft is still awaiting the coach. A validated cycle shows what
+              they signed off, and an archived one is not assignable until it is
+              restored, so neither offers the button again. */}
+          {cycle.status !== 'draft' ? (
             <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-              {cycle.coachNotes || 'Validated with no notes.'}
+              {cycle.coachNotes ||
+                (cycle.status === 'archived'
+                  ? 'Archived. Restore it to assign it again.'
+                  : 'Validated with no notes.')}
             </p>
           ) : (
             <>
@@ -188,20 +216,52 @@ export function MemberCyclePage({ memberId, cycleId }: { memberId: string; cycle
       </Card>
 
       <Card className="border-0 print-hidden" style={{ boxShadow: 'var(--shadow-sm)' }}>
-        <CardContent className="p-4 flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <p className="text-sm font-medium">Delete this cycle</p>
-            <p className="text-xs text-muted-foreground">
-              Removes the plan from {cycle.member.firstName}&apos;s file. Logged results are kept.
-            </p>
+        <CardContent className="p-4 space-y-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <p className="text-sm font-medium">
+                {cycle.status === 'archived' ? 'Restore this cycle' : 'Archive this cycle'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {cycle.status === 'archived'
+                  ? 'Puts it back among the active cycles on the member file.'
+                  : 'Keeps the plan on file but out of the way. Reversible at any time.'}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              className="shrink-0"
+              onClick={handleArchiveToggle}
+              loading={archiving}
+            >
+              {cycle.status === 'archived' ? (
+                <>
+                  <ArchiveRestore className="w-4 h-4 mr-2" /> Restore Cycle
+                </>
+              ) : (
+                <>
+                  <Archive className="w-4 h-4 mr-2" /> Archive Cycle
+                </>
+              )}
+            </Button>
           </div>
-          <Button
-            variant="outline"
-            className="shrink-0 text-destructive hover:bg-destructive/10"
-            onClick={() => setConfirmDelete(true)}
-          >
-            <Trash2 className="w-4 h-4 mr-2" /> Delete Cycle
-          </Button>
+
+          <div className="flex items-center justify-between gap-3 flex-wrap border-t border-border/60 pt-4">
+            <div>
+              <p className="text-sm font-medium">Delete this cycle</p>
+              <p className="text-xs text-muted-foreground">
+                Removes the plan from {cycle.member.firstName}&apos;s file for good. Logged results
+                are kept.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              className="shrink-0 text-destructive hover:bg-destructive/10"
+              onClick={() => setConfirmDelete(true)}
+            >
+              <Trash2 className="w-4 h-4 mr-2" /> Delete Cycle
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -248,6 +308,18 @@ export function MemberCyclePage({ memberId, cycleId }: { memberId: string; cycle
                 <Trash2 className="w-4 h-4 mr-2" /> Delete
               </Button>
             </div>
+            {cycle.status !== 'archived' && (
+              <button
+                type="button"
+                className="w-full text-sm text-muted-foreground hover:text-foreground underline"
+                onClick={() => {
+                  setConfirmDelete(false)
+                  handleArchiveToggle()
+                }}
+              >
+                Archive it instead — keeps the plan, just out of the way
+              </button>
+            )}
           </div>
         </DialogContent>
       </Dialog>

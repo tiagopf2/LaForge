@@ -14,6 +14,7 @@ import { toast } from 'sonner'
 import { FadeIn } from '@/components/ui/animate'
 import dynamic from 'next/dynamic'
 import { apiGet, query } from '@/lib/client'
+import { cn } from '@/lib/utils'
 import { formatMonth, formatSeconds } from '@/lib/forge'
 import type { Insights } from '@/lib/insights'
 
@@ -54,6 +55,15 @@ export function MemberDetailPage({ memberId }: { memberId: string }) {
       ;(groups[name] ??= []).push(record)
     }
     return groups
+  }, [member])
+
+  // Archived cycles stay on the file but stop competing with the live ones for
+  // the coach's attention.
+  const cycles = useMemo(() => {
+    return [...(member?.trainingCycles ?? [])].sort((a: any, b: any) => {
+      const archived = Number(a.status === 'archived') - Number(b.status === 'archived')
+      return archived !== 0 ? archived : 0
+    })
   }, [member])
 
   const forgeByMonth = useMemo(() => {
@@ -383,15 +393,18 @@ export function MemberDetailPage({ memberId }: { memberId: string }) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {(member.trainingCycles?.length ?? 0) === 0 ? (
+              {cycles.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No generated cycles yet.</p>
               ) : (
                 <div className="space-y-2">
-                  {member.trainingCycles.map((cycle: any) => (
+                  {cycles.map((cycle: any) => (
                     <Link
                       key={cycle.id}
                       href={`/dashboard/members/${memberId}/cycles/${cycle.id}`}
-                      className="p-3 rounded-lg bg-muted/50 hover:bg-muted flex items-center justify-between gap-3 text-sm transition-colors"
+                      className={cn(
+                        'p-3 rounded-lg bg-muted/50 hover:bg-muted flex items-center justify-between gap-3 text-sm transition-colors',
+                        cycle.status === 'archived' && 'opacity-60'
+                      )}
                     >
                       <div>
                         <p className="font-medium">{cycle.templateName}</p>

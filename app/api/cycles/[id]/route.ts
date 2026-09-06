@@ -88,7 +88,10 @@ function isObject(value: unknown): value is Record<string, unknown> {
 export const PATCH = route(updateCycleSchema, async ({ input }) => {
   const { id, status, ...rest } = input
 
-  const cycle = await prisma.trainingCycle.findUnique({ where: { id }, select: { id: true } })
+  const cycle = await prisma.trainingCycle.findUnique({
+    where: { id },
+    select: { id: true, validatedAt: true },
+  })
   if (!cycle) throw notFound('Cycle not found')
 
   return prisma.trainingCycle.update({
@@ -96,7 +99,10 @@ export const PATCH = route(updateCycleSchema, async ({ input }) => {
     data: {
       ...rest,
       ...(status ? { status } : {}),
-      ...(status === 'validated' ? { validatedAt: new Date() } : {}),
+      // Stamped once, when the coach first validates. Taking a cycle out of the
+      // archive returns it to `validated`, and re-stamping there would move the
+      // date to the day it was restored rather than the day it was approved.
+      ...(status === 'validated' && !cycle.validatedAt ? { validatedAt: new Date() } : {}),
     },
   })
 })
